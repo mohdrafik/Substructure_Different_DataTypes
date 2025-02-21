@@ -1,2 +1,3 @@
 .venv/
 sync_project.sh
+# run this command on the git bash -- ./sync_project.sh --> first before doing anything now start working as usual..

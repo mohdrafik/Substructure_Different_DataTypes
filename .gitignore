@@ -200,5 +200,5 @@ cython_debug/
 .pypirc
 
 # data file ignored due to the restrictions !
- data/
+data/
 

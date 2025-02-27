@@ -18,8 +18,35 @@ def basicstat(data):
     print("Standard Deviation:", np.std(data))
 
 def mat2npy(datapath,outputdatapath):
+    """
+    convert all the .mat file corresponding to the main key( 'Tom_RI') of ecah .mat file to the .npy (numpy array file) 
+    and save in npy array with the same name as .mat  
+    
+    """
 
-    # files = os.listdir(r'C:\Users\mrafik\OneDrive - C.N.R. STIIMA\tomogram all data\all_tomogram_data')
+    # # files = os.listdir(r'C:\Users\mrafik\OneDrive - C.N.R. STIIMA\tomogram all data\all_tomogram_data')
+    # datapath = input("enter the data path:(press enter for use default path):").strip()
+    # if not datapath:
+    #     datapath = r'C:\Users\mrafik\OneDrive - C.N.R. STIIMA\tomogram all data\all_tomogram_data'
+    #     if not os.path.exists(datapath):
+    #         datapath = 'C:\Users\Gaetano\Desktop\create_with_codeRafi\SharedContents\OneDrive - C.N.R. STIIMA\tomogram all data\all_tomogram_data'        
+
+    
+    # # outputdatapath = input("enter the output path:")
+    
+    # outputdatapath = input("Enter the output path (Press Enter to use default path): ").strip()  #  # Prompt user for output path
+    # # strip() Cleans Input: This removes any accidental spaces before checking for emptiness.
+    # # If user just pressed Enter, set default path
+    # if not outputdatapath:
+    #     outputdatapath = r'E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\data\intermdata1'
+    #     if not os.path.exists(outputdatapath):
+    #         outputdatapath = 'C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\data\intermdata1' 
+        
+    # # Ensure the directory exists; create it if it doesn't
+    # os.makedirs(outputdatapath, exist_ok=True)
+
+
+
     files = os.listdir(datapath)
     print(f" list of all files: {files}")
     if not (os.path.exists(outputdatapath)):
@@ -54,23 +81,45 @@ def mat2npy(datapath,outputdatapath):
 
 if __name__=="__main__":
 
+    # datapath = input("enter the data path:(press enter for use default path):").strip()
+    # if not datapath:
+    #     datapath = r'C:\Users\mrafik\OneDrive - C.N.R. STIIMA\tomogram all data\all_tomogram_data'
+    
+    # # outputdatapath = input("enter the output path:")
+    
+    # outputdatapath = input("Enter the output path (Press Enter to use default path): ").strip()  #  # Prompt user for output path
+    # # strip() Cleans Input: This removes any accidental spaces before checking for emptiness.
+    # # If user just pressed Enter, set default path
+    # if not outputdatapath:
+    #     outputdatapath = r'E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\data\intermdata1' 
+        
+
+    # # Ensure the directory exists; create it if it doesn't
+    # os.makedirs(outputdatapath, exist_ok=True)
+
+    # print(f"Output directory set to: {outputdatapath}")
+
+    # # Call function with the paths
+
+
     datapath = input("enter the data path:(press enter for use default path):").strip()
     if not datapath:
         datapath = r'C:\Users\mrafik\OneDrive - C.N.R. STIIMA\tomogram all data\all_tomogram_data'
-    
+        if not os.path.exists(datapath):
+            datapath = r'C:\Users\Gaetano\Desktop\create_with_codeRafi\SharedContents\OneDrive - C.N.R. STIIMA\tomogram all data\all_tomogram_data'        
+
+
     # outputdatapath = input("enter the output path:")
-    
+
     outputdatapath = input("Enter the output path (Press Enter to use default path): ").strip()  #  # Prompt user for output path
     # strip() Cleans Input: This removes any accidental spaces before checking for emptiness.
     # If user just pressed Enter, set default path
     if not outputdatapath:
-        outputdatapath = r'E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\data\intermdata1' 
+        outputdatapath = r'E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\data\intermdata1'
+        if not os.path.exists(outputdatapath):
+            outputdatapath = r'C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\data\intermdata1' 
         
-
     # Ensure the directory exists; create it if it doesn't
     os.makedirs(outputdatapath, exist_ok=True)
 
-    print(f"Output directory set to: {outputdatapath}")
-
-    # Call function with the paths
     mat2npy(datapath=datapath, outputdatapath=outputdatapath)

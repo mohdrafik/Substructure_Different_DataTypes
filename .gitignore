@@ -202,3 +202,4 @@ cython_debug/
 # data file ignored due to the restrictions !
 data/
 
+*.html

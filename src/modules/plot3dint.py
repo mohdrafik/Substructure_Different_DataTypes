@@ -1,8 +1,9 @@
-# import numpy as np
-# import plotly.graph_objects as go
+import numpy as np
+import plotly.graph_objects as go
 #  already imported numpy as np and plotly.graph_object as go. 
 # we already have 3D numpy array with shape (201, 201, 201)
 def plot3dinteractive(voldata):
+    """ vodata should be numpy 3d array     """
     array_3d = voldata
     # Create a 3D meshgrid
     x, y, z = np.meshgrid(np.arange(201), np.arange(201), np.arange(201))

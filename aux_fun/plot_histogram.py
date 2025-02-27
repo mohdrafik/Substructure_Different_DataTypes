@@ -1,9 +1,10 @@
-import matplotlib as plt
+import matplotlib.pyplot as plt  
 import seaborn as sns
-def plot_normalizedata_hist(normalized_data,datakey):
-    data = normalized_data
-    # sample_file = list(data .keys())[keynumber]
-    sample_data = data.flatten()
+
+def plot_normalizedata_hist(normalized_data, datakey):
+    """Plot histogram of normalized data."""
+    
+    sample_data = normalized_data.flatten()  # Ensure data is in 1D
     plt.figure(figsize=(6, 4))
     sns.histplot(sample_data, bins=50, kde=True)
     plt.title(f"Distribution of Normalized Data: {datakey}")

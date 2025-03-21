@@ -1,9 +1,12 @@
 import scipy.io as sio
 import numpy as np
 import os
+import glob
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import MinMaxScaler
+import json
 # from basicstatics import basicstat
-
-import numpy as np
 
 # Load the .npy file
 def basicstat(data):
@@ -16,6 +19,18 @@ def basicstat(data):
     print("Max Value:", np.max(data))
     print("Mean Value:", np.mean(data))
     print("Standard Deviation:", np.std(data))
+
+def load_and_normalize_npy(npyfile_path):
+
+    """
+    Loads a .npy file and applies Min-Max normalization.
+    """
+    data = np.load(npyfile_path)  # Load the file
+    min_val, max_val = np.min(data), np.max(data)  # Get min-max values
+    normalized_data = (data - min_val) / (max_val - min_val)  # Normalize to [0,1]
+    return normalized_data, min_val, max_val
+
+
 
 def mat2npy(datapath,outputdatapath):
     """
@@ -48,7 +63,7 @@ def mat2npy(datapath,outputdatapath):
 
 
     files = os.listdir(datapath)
-    print(f" list of all files: {files}")
+    print(f" list of only .mat files: {[ file for file in files if file.endswith('.mat')]}")
     if not (os.path.exists(outputdatapath)):
         os.makedirs(outputdatapath)
         print(f"Directory '{outputdatapath}' created.")
@@ -56,26 +71,30 @@ def mat2npy(datapath,outputdatapath):
         print("output directory already exist \n")
 
     for matfile in files:
-        if matfile[-4:]=='.mat':
-            print(matfile)
+        if matfile[-4:]=='.mat' :
+            print(f"just a matfile name is printed not proceesed yet, for checking name only :--> {matfile}")
             # Load .mat file
             matdata = os.path.join(datapath,matfile)
             mat = sio.loadmat(matdata)
             # Extract the 3D matrix
             tomogram_name = matfile[0:-4]
             # print(tomogram_name)
-            
-            for key in mat.keys():
-                # print(key)
-                if key in ['Tom_RI','Tom3']:
-                    tomogram_data = mat[key]  # Extract the refractive index data
-                # Save as a .npy file
-                    numpyarrfile = f"{tomogram_name}.npy"
-                    numpyarrfilename = os.path.join(outputdatapath,numpyarrfile)
-                    np.save(numpyarrfilename, tomogram_data)
-                    # data = np.load(numpyarrfile)
-                    # basicstat(data)
-                    basicstat(tomogram_data)
+            fileexistCheckname = os.path.join(outputdatapath,f"{tomogram_name}.npy")
+            if not os.path.exists(fileexistCheckname):
+                for key in mat.keys():
+                    # print(key)
+                    if key in ['Tom_RI','Tom3']:
+                        tomogram_data = mat[key]  # Extract the refractive index data
+                    # Save as a .npy file
+                        numpyarrfile = f"{tomogram_name}.npy"
+                        numpyarrfilename = os.path.join(outputdatapath,numpyarrfile)
+                        np.save(numpyarrfilename, tomogram_data)
+                        # data = np.load(numpyarrfile)
+                        # basicstat(data)
+                        basicstat(tomogram_data)
+            else:
+                print(f"file already exist:{tomogram_name}.npy")     
+
     print(f"process completed,.mat2 .npy is done and saved at:  {outputdatapath}  ]")                
 
 
@@ -115,9 +134,9 @@ if __name__=="__main__":
     # strip() Cleans Input: This removes any accidental spaces before checking for emptiness.
     # If user just pressed Enter, set default path
     if not outputdatapath:
-        outputdatapath = r'E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\data\intermdata1'
+        outputdatapath = r'E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\data\raw_npyData'
         if not os.path.exists(outputdatapath):
-            outputdatapath = r'C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\data\intermdata1' 
+            outputdatapath = r'C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\data\raw_npyData' 
         
     # Ensure the directory exists; create it if it doesn't
     os.makedirs(outputdatapath, exist_ok=True)

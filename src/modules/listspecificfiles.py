@@ -13,7 +13,7 @@ def readlistFiles(filepath,keyword):
         Filename = os.path.basename(file)
     
         retSpecificFiles.append(Filename)
-
+        # os.path.normpath
 
     return retSpecificFiles;
 
@@ -27,3 +27,7 @@ if __name__=="__main__":
     print("output res: --> \n",readlistFiles(filepath=filepath,keyword=Keyword))
 
 
+# from pathlib import Path
+
+# BASE_DIR = Path(__file__).resolve().parent  # Gets the folder containing this script
+# print("Base Directory:", BASE_DIR)

@@ -45,18 +45,3 @@ if __name__ == "__main__":
     # print(d1)
 
 
-
-
-# # Example usage (can be removed or commented in notebook):
-# if __name__ == "__main__":
-#     dir_path = input("📁 Enter filepath path: ").strip()
-#     keyword = input("🔍 Enter file keyword to filter (e.g., normalized.npy): ").strip()
-    
-#     try:
-#         result_files = readlistFiles(dir_path, keyword)
-#         print("\n✅ Matched Files:")
-#         for f in result_files:
-#             print(" -", f)
-#     except Exception as e:
-#         print(e)
-

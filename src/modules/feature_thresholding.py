@@ -67,7 +67,7 @@ class FeatureQuantileThresholding:
             os.makedirs(self.save_res_plot, exist_ok=True)
             png_path = os.path.join(self.save_res_plot, f"{dataset}_thresh.png")
             plt.savefig(png_path, dpi=300)
-            print(f"🖼️ Saved PNG: {png_path}")
+            print(f"Saved PNG: {png_path}")
 
         plt.show()
 
@@ -91,7 +91,7 @@ class FeatureQuantileThresholding:
             save_path = os.path.join(self.save_dir, "ThresQuntFeature.txt")
             with open(save_path, 'w') as f:
                 f.write(str(self.features))
-            print(f"✅ Features saved to: {save_path}")
+            print(f"Features saved to: {save_path}")
 
 
 if __name__ =="__main__":

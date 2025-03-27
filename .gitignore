@@ -212,3 +212,6 @@ notebooks/addpathsrc_addpathscript.py
 results/*.png
 .vscode
 plots/newplot.png
+results/cluster_output/
+results/output_clustering/
+results/output_clustering

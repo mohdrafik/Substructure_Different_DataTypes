@@ -220,5 +220,4 @@ docs/dyanamic thresholding based on statistics .docx
 docs/
 docs/
 plots/normalized_histogram_plot_example.png
-src/garbage.py
-src/garbage.ipynb
+

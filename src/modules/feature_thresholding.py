@@ -93,18 +93,74 @@ class FeatureQuantileThresholding:
                 f.write(str(self.features))
             print(f"Features saved to: {save_path}")
 
+class StaticsData(FeatureQuantileThresholding):
+
+    def __init__(self, data_dir, save_dir=None, BASE_DIR=None, keyword=None):
+        super().__init__(data_dir, save_dir, BASE_DIR, keyword)
+        
+    def stat_extract_features(self, data, dataset_name, save_features=True):
+        """
+            Extracts extended statistical features including min and max,
+            combines with parent features and saves all to a unified file.
+        """
+    # Inherit base features
+        base_features = super().extract_features(data)
+        max_val = np.max(data)
+        min_val = np.min(data)
+
+        # Combine all features in a dictionary
+        feature_dict = {
+            "Mean": base_features[0],
+            "Std Dev": base_features[1],
+            "Q95": base_features[2],
+            "Q99": base_features[3],
+            "Min": min_val,
+            "Max": max_val
+        }
+
+        # Save to a single file
+        if save_features and self.save_dir:
+            os.makedirs(self.save_dir, exist_ok=True)
+            save_path = os.path.join(self.save_dir, f"AllFeatures_Stats{self.keyword[:-4]}.csv")
+            with open(save_path, 'a') as f:  # append mode to collect all datasets
+                f.write(f"{dataset_name}: {feature_dict}\n")
+            print(f"Saved features for {dataset_name} to: {save_path}")
+
+        return feature_dict
+
+
 
 if __name__ =="__main__":
-    from pathlib import Path  # type: ignore
+    
+    from pathlib import Path
+    from feature_thresholding import FeatureQuantileThresholding
+    from listspecificfiles import readlistFiles
 
-    from feature_thresholding import FeatureQuantileThresholding  # type: ignore
-    from listspecificfiles import readlistFiles  # type: ignore
-
-    data_dir = r"E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\data\normalized_npyData"
+    data_dir = r"E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\data\raw_npyData"
     save_dir = r"E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\results\featureQuantileThres"
     cwd = Path.cwd().parent.parent
-    BASE_DIR = cwd/ "results"
+    BASE_DIR = cwd / "results"
+
     print(f"----------< {BASE_DIR}")
-    fq = FeatureQuantileThresholding(data_dir, save_dir, BASE_DIR=BASE_DIR)
-    fq.process(visualize=True, save_features=True)
+
+    stat_data = StaticsData(data_dir, save_dir, BASE_DIR=BASE_DIR, keyword='.npy')
+
+    for dataset_name in stat_data.dataset_names:
+        data = stat_data.load_normalized_data(dataset_name)
+        features = stat_data.stat_extract_features(data, dataset_name)
+        print(f"Features for {dataset_name}: {features}")
+
+
+    # from pathlib import Path  # type: ignore
+
+    # from feature_thresholding import FeatureQuantileThresholding  # type: ignore
+    # from listspecificfiles import readlistFiles  # type: ignore
+
+    # data_dir = r"E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\data\normalized_npyData"
+    # save_dir = r"E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\results\featureQuantileThres"
+    # cwd = Path.cwd().parent.parent
+    # BASE_DIR = cwd/ "results"
+    # print(f"----------< {BASE_DIR}")
+    # fq = FeatureQuantileThresholding(data_dir, save_dir, BASE_DIR=BASE_DIR)
+    # fq.process(visualize=True, save_features=True)
 

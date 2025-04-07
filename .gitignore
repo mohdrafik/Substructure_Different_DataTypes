@@ -220,3 +220,4 @@ docs/dyanamic thresholding based on statistics .docx
 docs/
 plots/normalized_histogram_plot_example.png
 
+results/otsu_results/

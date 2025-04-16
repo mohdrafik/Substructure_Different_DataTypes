@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.preprocessing import StandardScaler
 from mpl_toolkits.mplot3d import Axes3D
+import open3d as o3d
+
 # THRESHOLD_VALUE =  1.334
 def load_volume(filepath,THRESHOLD_VALUE):
     if filepath.endswith('.npy'):
@@ -27,7 +29,7 @@ def extract_features(volume):
     return np.hstack((coords, intensities))
 
 def run_kmeans(X_scaled, n_clusters=4):
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    kmeans = KMeans(n_clusters=n_clusters, init= 'k-means++',random_state=42)
     return kmeans.fit_predict(X_scaled)
 
 def run_dbscan_per_cluster(X_scaled, kmeans_labels, eps=0.6, min_samples=5):
@@ -55,6 +57,44 @@ def plot_clusters(coords, labels, title="Cluster Visualization"):
     plt.title(title)
     plt.colorbar(scatter)
     plt.show()
+
+
+def VisualizeOpen3d(clusteredNPY_Path, clusteredNPY_Coords):
+    # import numpy as np
+    # import open3d as o3d
+    # import os
+
+    # Load saved cluster labels and coordinates
+    labels = np.load(clusteredNPY_Path)
+    coords = np.load(clusteredNPY_Coords)
+
+    # labels = np.load(r"E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\src\clustering_output\cluster_labels.npy")
+    # coords = np.load(r"E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\src\clustering_output\voxel_coords.npy")
+
+    # Get unique cluster labels (excluding noise label -1)
+    unique_labels = np.unique(labels)
+    unique_labels = unique_labels[unique_labels != -1]
+
+    # Directory to optionally save .ply files
+    # os.makedirs("o3d_clusters", exist_ok=True)
+
+    for label in unique_labels:
+        cluster_coords = coords[labels == label]
+
+        # Create Open3D point cloud
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(cluster_coords)
+
+        # Optional: assign color per cluster
+        color = np.random.rand(3)  # random RGB
+        pcd.paint_uniform_color(color)
+
+        # Visualize
+        print(f"Showing cluster {label} with {len(cluster_coords)} points...")
+        o3d.visualization.draw_geometries([pcd])
+
+        # Save if you want
+        # o3d.io.write_point_cloud(f"o3d_clusters/cluster_{label}.ply", pcd)
 
 
 # Example use:

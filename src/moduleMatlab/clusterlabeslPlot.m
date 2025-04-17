@@ -27,12 +27,12 @@ for i = 1:length(unique_labels)
 
     if cluster_id == -1
         continue; % Skip noise
-    end
+    end      
 
     cluster_coords = coords(labels == cluster_id, :);
 
     if size(cluster_coords, 1) < min_cluster_size
-        fprintf("⚠️ Cluster %d skipped (too small)\n", cluster_id);
+        fprintf("  Cluster %d skipped (too small)\n", cluster_id);
         continue;
     end
 
@@ -42,11 +42,11 @@ for i = 1:length(unique_labels)
         [tri, pts] = boundaryFacets(shp);
 
         if isempty(tri)
-            fprintf("⚠️ Cluster %d: Could not form valid mesh (empty facets)\n", cluster_id);
+            fprintf("  Cluster %d: Could not form valid mesh (empty facets)\n", cluster_id);
             continue;
         end
     catch ME
-        fprintf("⚠️ Cluster %d: Alpha shape error - %s\n", cluster_id, ME.message);
+        fprintf("  Cluster %d: Alpha shape error - %s\n", cluster_id, ME.message);
         continue;
     end
 

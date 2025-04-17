@@ -46,6 +46,7 @@ def run_dbscan_per_cluster(X_scaled, kmeans_labels, eps=0.6, min_samples=5):
 
 def save_results(output_dir, labels, coords):
     os.makedirs(output_dir, exist_ok=True)
+    
     np.save(os.path.join(output_dir, "cluster_labels.npy"), labels)
     sio.savemat(os.path.join(output_dir, "cluster_labels.mat"), {"labels": labels})
     np.save(os.path.join(output_dir, "voxel_coords.npy"), coords)

@@ -52,16 +52,25 @@ else:
     raise ValueError("Invalid input_type. Choose 'mat' or 'npy'.")
 
 # --- EXTRACT NONZERO VOXELS AS POINT CLOUD ---
-coords = np.array(np.nonzero(volume)).T
+coords = np.array(np.nonzero(volume)).T  
+# it will returns the coordinate of each nonzero values in volume and formate will be like this [[]
+# coords =
+# [z1,x1,y1]
+# [z2,x2,y2]
+# ........
+# [zn,xn,yn]]
+
 intensities = volume[volume > 0].reshape(-1, 1)
 X = np.hstack((coords, intensities))  # shape: (N, 4)
+# np.hstack() horizontally stacks arrays (i.e., along columns / axis=1), meaning it concatenates them side by side. a = [[1],[2],[3]] , b = [[10],[20],[30]]
+# np.hstack(a,b) --> results will be [[1,10],[2,20],[3,30]]
 
 # --- SCALE FEATURES ---
-# X_scaled = StandardScaler().fit_transform(X)
+X_scaled = StandardScaler().fit_transform(X)
 
 # --- APPLY K-MEANS ---
-# kmeans = KMeans(n_clusters=kmeans_k, random_state=42).fit(X_scaled)
-kmeans = KMeans(n_clusters=kmeans_k, random_state=42).fit(X)
+kmeans = KMeans(n_clusters=kmeans_k,init = 'k-means++',random_state=42).fit(X_scaled)
+# kmeans = KMeans(n_clusters=kmeans_k, init = 'k-means++', random_state=42).fit(X)
 kmeans_labels = kmeans.labels_
 
 # --- HYBRID: DBSCAN WITHIN EACH K-MEANS CLUSTER ---
@@ -71,8 +80,8 @@ label_offset = 0
 for cluster_id in np.unique(kmeans_labels):
     print(f"i have compl k-means now in dbsacn, cluster_id: {cluster_id}")
     indices = np.where(kmeans_labels == cluster_id)[0]
-    # X_sub = X_scaled[indices]
-    X_sub = X[indices]
+    X_sub = X_scaled[indices]
+    # X_sub = X[indices]
     db = DBSCAN(eps=1.5, min_samples=10).fit(X_sub)
     db_labels = db.labels_
     db_labels[db_labels != -1] += label_offset
@@ -83,6 +92,7 @@ for cluster_id in np.unique(kmeans_labels):
 os.makedirs(output_dir, exist_ok=True)
 np.save(os.path.join(output_dir, "cluster_labels.npy"), final_labels)
 sio.savemat(os.path.join(output_dir, "cluster_labels.mat"), {"labels": final_labels})
+np.save(os.path.join(output_dir, "voxel_coords.npy"), coords)
 
 # Save each cluster as separate file
 for label in np.unique(final_labels):

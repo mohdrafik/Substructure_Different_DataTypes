@@ -80,9 +80,15 @@ label_offset = 0
 for cluster_id in np.unique(kmeans_labels):
     print(f"i have compl k-means now in dbsacn, cluster_id: {cluster_id}")
     indices = np.where(kmeans_labels == cluster_id)[0]
+<<<<<<< HEAD
     X_sub = X_scaled[indices]
     # X_sub = X[indices]
     db = DBSCAN(eps=1.5, min_samples=10).fit(X_sub)
+=======
+    # X_sub = X_scaled[indices]
+    X_sub = X[indices]
+    db = DBSCAN(eps=1.5, min_samples=10).fit(X_sub)  # using the DBS
+>>>>>>> f4b18b3cf10e5b90342cad42609c959f16d1df35
     db_labels = db.labels_
     db_labels[db_labels != -1] += label_offset
     final_labels[indices] = db_labels

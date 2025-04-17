@@ -37,7 +37,7 @@ def run_dbscan_per_cluster(X_scaled, kmeans_labels, eps=0.6, min_samples=5):
     label_offset = 0
     for cluster_id in np.unique(kmeans_labels):
         indices = np.where(kmeans_labels == cluster_id)[0]
-        db = DBSCAN(eps=eps, min_samples=min_samples)
+        db = DBSCAN(eps=eps, min_samples=min_samples) # using the DBSCAN 
         sub_labels = db.fit_predict(X_scaled[indices])
         sub_labels[sub_labels != -1] += label_offset
         final_labels[indices] = sub_labels

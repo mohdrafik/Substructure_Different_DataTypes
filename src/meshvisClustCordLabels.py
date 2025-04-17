@@ -73,7 +73,7 @@ for cluster_id in np.unique(kmeans_labels):
     indices = np.where(kmeans_labels == cluster_id)[0]
     # X_sub = X_scaled[indices]
     X_sub = X[indices]
-    db = DBSCAN(eps=1.5, min_samples=10).fit(X_sub)
+    db = DBSCAN(eps=1.5, min_samples=10).fit(X_sub)  # using the DBS
     db_labels = db.labels_
     db_labels[db_labels != -1] += label_offset
     final_labels[indices] = db_labels

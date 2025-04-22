@@ -225,3 +225,5 @@ src/clustering_output/*
 results/hybrid_Kdbcluster/* 
 
 
+src/clustering_output/*
+results/*

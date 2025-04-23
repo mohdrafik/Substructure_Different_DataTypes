@@ -63,34 +63,6 @@ switch choose
         min_cluster_size = 10; % Minimum number of points to create mesh
         face_transparency = 0.6;
         
-        % === Load Data === labels =
-        % load('C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\src\clustering_output\convertedmatfiles\cluster_labels.mat');
-        % coords =
-        % load('C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\src\clustering_output\convertedmatfiles\voxel_coords.mat');
-        % 
-        % labels = labels.data; coords = coords.data;
-        
-        % alldata =
-        % load('E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\results\hybrid_Kdbcluster\Tomogramma_BuddingYeastCell\voxel_coords_labeled.mat');
-        % alldata =
-        % load('C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\results\hybrid_Kdbcluster\tomo_Grafene_24h\voxel_coords_labeled.mat');
-        % alldata  =
-        % load('E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\results\hybrid_Kdbcluster\Tomogramma_BuddingYeastCell\voxel_coords_labeled.mat');
-        % 
-        % labels = alldata.coords_labels(:,4); labels = labels'; coords =
-        % alldata.coords_labels(:,1:3);
-        
-        
-        % unique_labels = unique(labels);
-        
-        % === Loop through each cluster === for i = 1:length(unique_labels)
-        %     cluster_id = unique_labels(i);
-        % 
-        %     if cluster_id == -1
-        %         continue; % Skip noise
-        %     end
-        % 
-        %     cluster_coords = coords(labels == cluster_id, :);
         cluster_coords = coords.coords ;
         % cluster_id = k-1; cluster_id = str2double(tokens{1}{1});
         cluster_id = clusterID;
@@ -151,27 +123,21 @@ switch choose
         min_cluster_size = 10; % Minimum number of points to create mesh
         face_transparency = 0.6;
         
-        % === Load Data === labels =
-        % load('C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\src\clustering_output\convertedmatfiles\cluster_labels.mat');
-        % coords =
-        % load('C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\src\clustering_output\convertedmatfiles\voxel_coords.mat');
-        % 
-        % labels = labels.data; coords = coords.data;
-        
-        % alldata =
-        % load('E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\results\hybrid_Kdbcluster\Tomogramma_BuddingYeastCell\voxel_coords_labeled.mat');
         % alldata =
         % load('C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\results\hybrid_Kdbcluster\tomo_Grafene_24h\voxel_coords_labeled.mat');
         % alldata  = load('E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\results\hybrid_Kdbcluster\Tomogramma_BuddingYeastCell\voxel_coords_labeled.mat');
         
         filepath = input('enter the complete filepath: enclose your path with quotes as a string');
         disp(filepath)
-
         alldata = load(filepath);
-    
-        labels = alldata.kmeans_coords_labels(:,4); 
+		
+		fieldNames = fieldnames(alldata);
+		% Access the first field (assuming only one data variable exists)
+		labels = alldata.(fieldNames{1})(:,4);
+        % labels = data.kmeans_coords_labels(:,4); 
         labels = labels';
-        coords = alldata.kmeans_coords_labels(:,1:3);
+		
+        coords = alldata.(fieldNames{1})(:,1:3);
         
         
         unique_labels = unique(labels);

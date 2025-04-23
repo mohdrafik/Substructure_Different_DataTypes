@@ -1,4 +1,3 @@
-
 # Hybrid Clustering with K-Means + DBSCAN for 3D Volume Data
 
 import os
@@ -77,7 +76,18 @@ X_scaled = StandardScaler().fit_transform(X)   # Z-score scaling/normalization -
 # --- APPLY K-MEANS ---
 kmeans = KMeans(n_clusters=kmeans_k,init = 'k-means++',random_state=42).fit(X_scaled)
 # kmeans = KMeans(n_clusters=kmeans_k, init = 'k-means++', random_state=42).fit(X)
-kmeans_labels = kmeans.labels_   # kmeans.labels_ → array of cluster assignments for each data point, storing the cluster labels for all samples in the kmeans_labels variable, so you can use them later for saving or analyzing clusters / future use.
+kmeans_labels = kmeans.labels_   # kmeans.labels_ --> kmeans_labels is one row (1xN) of labels (0,1,.., n_clusters -1) as output → array of cluster assignments for each data point, storing the cluster labels for all samples in the kmeans_labels variable, so you can use them later for saving or analyzing clusters / future use.
+
+# <------------ For saving the k-means cluster and corresponding coordinates results -------- >
+kmeans_coords_with_labels = np.hstack((coords, kmeans_labels.reshape(-1, 1)))  # [x, y, z, kmeans_label]
+# Save as .npy
+kmeans_intResultDir = os.path.join(output_dir,f"km{DATAFILE_NAME.replace(".npy", "")}")
+os.makedirs(kmeans_intResultDir,exist_ok=True)
+np.save(os.path.join(kmeans_intResultDir, "kmeans_coords_labels.npy"), kmeans_coords_with_labels)
+# Save as .mat
+sio.savemat(os.path.join(kmeans_intResultDir, "kmeans_coords_labels.mat"), {"kmeans_coords_labels": kmeans_coords_with_labels})
+
+
 
 # --- HYBRID: DBSCAN WITHIN EACH K-MEANS CLUSTER ---
 final_labels = -np.ones(len(X), dtype=int)  # Prepares an array to hold your final clustering labels. -1 means unassigned/outlier (just like DBSCAN does).Example: If X has 1000 points → final_labels = [-1, -1, ..., -1] (length 1000)

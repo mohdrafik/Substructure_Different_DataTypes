@@ -48,6 +48,11 @@ if input_type == "mat":
     volume = mat_data[volume_key]
 elif input_type == "npy":
     volume = np.load(input_path)
+    # to reduce the size of data volume.
+    # x_row,y_row,z_row = volume.shape
+    # volume = volume[:x_row/2,:y_row/2,:z_row/2]
+    volume = volume[::2, ::2, ::2]
+
 else:
     raise ValueError("Invalid input_type. Choose 'mat' or 'npy'.")
 
@@ -85,7 +90,7 @@ for cluster_id in np.unique(kmeans_labels):
     X_sub = X_scaled[indices] # here extracting the coordinate and intensity value according to the cluster_id. [X_scaled size is: (N, 4)]
     # X_sub = X[indices]
 
-    db = DBSCAN(eps=2.1, min_samples=20).fit(X_sub)  # db scan here in each loop for each cluster further.
+    db = DBSCAN(eps=0.5, min_samples=10).fit(X_sub)  # db scan here in each loop for each cluster further.
     db_labels = db.labels_
     db_labels[db_labels != -1] += label_offset
     final_labels[indices] = db_labels
@@ -101,9 +106,9 @@ np.save(os.path.join(dataset_dir, "cluster_labels.npy"), final_labels)
 sio.savemat(os.path.join(dataset_dir, "cluster_labels.mat"), {"labels": final_labels})
 
 # Save voxel coordinates with cluster labels
-coords_with_labels = np.hstack((coords, final_labels.reshape(-1, 1)))
-np.save(os.path.join(dataset_dir, "voxel_coords_labeled.npy"), coords_with_labels)
-sio.savemat(os.path.join(dataset_dir, "voxel_coords_labeled.mat"), {"coords_labels": coords_with_labels})
+# coords_with_labels = np.hstack((coords, final_labels.reshape(-1, 1)))
+# np.save(os.path.join(dataset_dir, "voxel_coords_labeled.npy"), coords_with_labels)
+# sio.savemat(os.path.join(dataset_dir, "voxel_coords_labeled.mat"), {"coords_labels": coords_with_labels})
 
 # np.save(os.path.join(output_dir, "cluster_labels.npy"), final_labels)
 # sio.savemat(os.path.join(output_dir, "cluster_labels.mat"), {"labels": final_labels})

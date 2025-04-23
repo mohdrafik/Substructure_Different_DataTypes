@@ -13,11 +13,18 @@ min_cluster_size = 10; % Minimum number of points to create mesh
 face_transparency = 0.6;
 
 % === Load Data ===
-labels = load('C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\src\clustering_output\convertedmatfiles\cluster_labels.mat');
-coords = load('C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\src\clustering_output\convertedmatfiles\voxel_coords.mat');
+% labels = load('C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\src\clustering_output\convertedmatfiles\cluster_labels.mat');
+% coords = load('C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\src\clustering_output\convertedmatfiles\voxel_coords.mat');
+% 
+% labels = labels.data;
+% coords = coords.data;
 
-labels = labels.data;
-coords = coords.data;
+alldata = load('E:\Projects\substructure_3d_data\Substructure_Different_DataTypes\results\hybrid_Kdbcluster\Tomogramma_BuddingYeastCell\voxel_coords_labeled.mat');
+
+
+labels = alldata.coords_labels(:,4);
+labels = labels';
+coords = alldata.coords_labels(:,1:3);
 
 unique_labels = unique(labels);
 
@@ -38,6 +45,7 @@ for i = 1:length(unique_labels)
 
     % === Generate alpha shape ===
     try
+        cluster_coords = full(double(cluster_coords)); %  forcefully converted the matrix to double, full, and real before alphaShape if not.
         shp = alphaShape(cluster_coords, alpha_value);
         [tri, pts] = boundaryFacets(shp);
 

@@ -5,7 +5,7 @@ import os
 import numpy as np
 import scipy.io as sio
 from sklearn.cluster import KMeans, DBSCAN
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler 
 import open3d as o3d
 import matplotlib.pyplot as plt
 
@@ -38,7 +38,7 @@ input_type = "npy"   #"mat"   or "npy"
 input_path = input_path  # or .npy
 volume_key = "volume"  # for .mat file: key inside the .mat dict
 
-output_dir = "cluster_output"
+# output_dir = "cluster_output"
 output_dir = SRCFILES/"results"/"hybrid_Kdbcluster"
 kmeans_k = 7
 
@@ -48,6 +48,11 @@ if input_type == "mat":
     volume = mat_data[volume_key]
 elif input_type == "npy":
     volume = np.load(input_path)
+    # to reduce the size of data volume.
+    # x_row,y_row,z_row = volume.shape
+    # volume = volume[:x_row/2,:y_row/2,:z_row/2]
+    volume = volume[::2, ::2, ::2]
+
 else:
     raise ValueError("Invalid input_type. Choose 'mat' or 'npy'.")
 
@@ -66,48 +71,90 @@ X = np.hstack((coords, intensities))  # shape: (N, 4)
 # np.hstack(a,b) --> results will be [[1,10],[2,20],[3,30]]
 
 # --- SCALE FEATURES ---
-X_scaled = StandardScaler().fit_transform(X)
+X_scaled = StandardScaler().fit_transform(X)   # Z-score scaling/normalization -> zero mean, unit variance
 
 # --- APPLY K-MEANS ---
 kmeans = KMeans(n_clusters=kmeans_k,init = 'k-means++',random_state=42).fit(X_scaled)
 # kmeans = KMeans(n_clusters=kmeans_k, init = 'k-means++', random_state=42).fit(X)
-kmeans_labels = kmeans.labels_
+kmeans_labels = kmeans.labels_   # kmeans.labels_ → array of cluster assignments for each data point, storing the cluster labels for all samples in the kmeans_labels variable, so you can use them later for saving or analyzing clusters / future use.
 
 # --- HYBRID: DBSCAN WITHIN EACH K-MEANS CLUSTER ---
-final_labels = -np.ones(len(X), dtype=int)
+final_labels = -np.ones(len(X), dtype=int)  # Prepares an array to hold your final clustering labels. -1 means unassigned/outlier (just like DBSCAN does).Example: If X has 1000 points → final_labels = [-1, -1, ..., -1] (length 1000)
+
 label_offset = 0
 
 for cluster_id in np.unique(kmeans_labels):
     print(f"i have compl k-means now in dbsacn, cluster_id: {cluster_id}")
-    indices = np.where(kmeans_labels == cluster_id)[0]
-    X_sub = X_scaled[indices]
+    indices = np.where(kmeans_labels == cluster_id)[0]  #  indices = np.where(kmeans_labels == cluster_id) --> indices returns tuple of array like -> (array([1, 4]),) to extract use [0] first array(np.where(kmeans_labels == cluster_id))[0] and get result like this # array([1, 4])
+
+    X_sub = X_scaled[indices] # here extracting the coordinate and intensity value according to the cluster_id. [X_scaled size is: (N, 4)]
     # X_sub = X[indices]
-    db = DBSCAN(eps=1.5, min_samples=10).fit(X_sub)  # db scan here in each loop for each cluster further.
+
+    db = DBSCAN(eps=0.5, min_samples=10).fit(X_sub)  # db scan here in each loop for each cluster further.
     db_labels = db.labels_
     db_labels[db_labels != -1] += label_offset
     final_labels[indices] = db_labels
     label_offset += db_labels.max() + 1
 
 # --- SAVE RESULTS ---
-os.makedirs(output_dir, exist_ok=True)
-np.save(os.path.join(output_dir, "cluster_labels.npy"), final_labels)
-sio.savemat(os.path.join(output_dir, "cluster_labels.mat"), {"labels": final_labels})
-np.save(os.path.join(output_dir, "voxel_coords.npy"), coords)
+# os.makedirs(output_dir, exist_ok=True)
+dataset_dir = os.path.join(output_dir, DATAFILE_NAME.replace(".npy", ""))
+os.makedirs(dataset_dir, exist_ok=True)
 
-# Save each cluster as separate file
+# Save overall clustering results
+np.save(os.path.join(dataset_dir, "cluster_labels.npy"), final_labels)
+sio.savemat(os.path.join(dataset_dir, "cluster_labels.mat"), {"labels": final_labels})
+
+# Save voxel coordinates with cluster labels
+# coords_with_labels = np.hstack((coords, final_labels.reshape(-1, 1)))
+# np.save(os.path.join(dataset_dir, "voxel_coords_labeled.npy"), coords_with_labels)
+# sio.savemat(os.path.join(dataset_dir, "voxel_coords_labeled.mat"), {"coords_labels": coords_with_labels})
+
+# np.save(os.path.join(output_dir, "cluster_labels.npy"), final_labels)
+# sio.savemat(os.path.join(output_dir, "cluster_labels.mat"), {"labels": final_labels})
+# np.save(os.path.join(output_dir, "voxel_coords.npy"), coords)
+
+
+# Save each cluster as a subdirectory
 for label in np.unique(final_labels):
-    print(f"label: {label}")
-
     if label == -1:
         continue  # skip noise
     cluster_points = coords[final_labels == label]
     cluster_intensity = intensities[final_labels == label]
     cluster_data = np.hstack((cluster_points, cluster_intensity))
-    subdir = os.path.join(output_dir, f"cluster_{label}")
-    os.makedirs(subdir, exist_ok=True)
-    np.save(os.path.join(subdir, f"cluster_{label}.npy"), cluster_data)
-    sio.savemat(os.path.join(subdir, f"cluster_{label}.mat"), {"data": cluster_data})
+
+    cluster_dir = os.path.join(dataset_dir, f"cluster_{label}")
+    os.makedirs(cluster_dir, exist_ok=True)
+
+    # Save full cluster (coords + intensity)
+    np.save(os.path.join(cluster_dir, f"cluster_{label}.npy"), cluster_data)
+    sio.savemat(os.path.join(cluster_dir, f"cluster_{label}.mat"), {"data": cluster_data})
+
+    # Save coordinates only
+    np.save(os.path.join(cluster_dir, f"coords_{label}.npy"), cluster_points)
+    sio.savemat(os.path.join(cluster_dir, f"coords_{label}.mat"), {"coords": cluster_points})
+
+
+
+# Save each cluster as separate file
+# for label in np.unique(final_labels):
+#     print(f"label: {label}")
+
+#     if label == -1:
+#         continue  # skip noise
+#     cluster_points = coords[final_labels == label]
+#     cluster_intensity = intensities[final_labels == label]
+#     cluster_data = np.hstack((cluster_points, cluster_intensity))
+#     subdir = os.path.join(output_dir, f"cluster_{label}")
+#     os.makedirs(subdir, exist_ok=True)
+#     np.save(os.path.join(subdir, f"cluster_{label}.npy"), cluster_data)
+#     sio.savemat(os.path.join(subdir, f"cluster_{label}.mat"), {"data": cluster_data})
     
+
+
+
+
+
 
     # # --- VISUALIZE USING Open3D ---
     # print(f"visualizing the label: {label}")
@@ -131,7 +178,6 @@ for label in np.unique(final_labels):
     #     o3d.visualization.draw_geometries([pcd, mesh], window_name=f"Cluster {label} (Mesh + PointCloud)")
     # except:
     #     o3d.visualization.draw_geometries([pcd], window_name=f"Cluster {label} (PointCloud Only)")
-
 
 
 
@@ -163,4 +209,3 @@ for label in np.unique(final_labels):
 
 #     # Example usage:
 #     # visualize_and_save_clusters("clustering_output/cluster_labels.npy", "clustering_output/voxel_coords.npy")
-

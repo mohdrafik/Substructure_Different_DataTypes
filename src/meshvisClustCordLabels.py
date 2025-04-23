@@ -22,7 +22,8 @@ DATAFILES  = SRCFILES/"data"/"raw_npyData"
 
 listfiles = os.listdir(str(DATAFILES))
 # Datafile = random.choice(listfiles)
-DATAFILE_NAME = "Tomogramma_BuddingYeastCell.npy"
+# DATAFILE_NAME = "Tomogramma_BuddingYeastCell.npy"  # data\raw_npyData\tomo_Grafene_24h.npy
+DATAFILE_NAME = "tomo_Grafene_24h.npy"  #  data\raw_npyData\tomo_Grafene_24h.npy
 
 for file in listfiles:
     if file == DATAFILE_NAME:
@@ -51,7 +52,7 @@ elif input_type == "npy":
     # to reduce the size of data volume.
     # x_row,y_row,z_row = volume.shape
     # volume = volume[:x_row/2,:y_row/2,:z_row/2]
-    volume = volume[::2, ::2, ::2]
+    volume = volume[::5, ::5, ::5]
 
 else:
     raise ValueError("Invalid input_type. Choose 'mat' or 'npy'.")
@@ -90,14 +91,14 @@ for cluster_id in np.unique(kmeans_labels):
     X_sub = X_scaled[indices] # here extracting the coordinate and intensity value according to the cluster_id. [X_scaled size is: (N, 4)]
     # X_sub = X[indices]
 
-    db = DBSCAN(eps=0.5, min_samples=10).fit(X_sub)  # db scan here in each loop for each cluster further.
+    db = DBSCAN(eps=1.5, min_samples=10).fit(X_sub)  # db scan here in each loop for each cluster further.
     db_labels = db.labels_
     db_labels[db_labels != -1] += label_offset
     final_labels[indices] = db_labels
     label_offset += db_labels.max() + 1
 
 # --- SAVE RESULTS ---
-# os.makedirs(output_dir, exist_ok=True)
+
 dataset_dir = os.path.join(output_dir, DATAFILE_NAME.replace(".npy", ""))
 os.makedirs(dataset_dir, exist_ok=True)
 
@@ -106,10 +107,13 @@ np.save(os.path.join(dataset_dir, "cluster_labels.npy"), final_labels)
 sio.savemat(os.path.join(dataset_dir, "cluster_labels.mat"), {"labels": final_labels})
 
 # Save voxel coordinates with cluster labels
-# coords_with_labels = np.hstack((coords, final_labels.reshape(-1, 1)))
-# np.save(os.path.join(dataset_dir, "voxel_coords_labeled.npy"), coords_with_labels)
-# sio.savemat(os.path.join(dataset_dir, "voxel_coords_labeled.mat"), {"coords_labels": coords_with_labels})
+coords_with_labels = np.hstack((coords, final_labels.reshape(-1, 1)))
+np.save(os.path.join(dataset_dir, "voxel_coords_labeled.npy"), coords_with_labels)
+sio.savemat(os.path.join(dataset_dir, "voxel_coords_labeled.mat"), {"coords_labels": coords_with_labels})
 
+
+#<---------below one is older version ----------->
+# os.makedirs(output_dir, exist_ok=True)
 # np.save(os.path.join(output_dir, "cluster_labels.npy"), final_labels)
 # sio.savemat(os.path.join(output_dir, "cluster_labels.mat"), {"labels": final_labels})
 # np.save(os.path.join(output_dir, "voxel_coords.npy"), coords)

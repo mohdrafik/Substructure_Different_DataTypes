@@ -129,6 +129,7 @@ switch choose
         
         filepath = input('enter the complete filepath: enclose your path with quotes as a string');
         disp(filepath)
+
         alldata = load(filepath);
 		
 		fieldNames = fieldnames(alldata);
@@ -193,12 +194,37 @@ switch choose
             title(['Cluster ' num2str(cluster_id)]);
             xlabel('X'); ylabel('Y'); zlabel('Z');
             axis equal;
-            grid on;
+%             grid on;
             view(3); camlight; lighting gouraud;
+
+            % === Saving ===
+            result_dir = "C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\results\hybrid_Kdbcluster\kmIntensitytomo_grafene_48h";
+            base_filename = fullfile(result_dir, ['cluster_' num2str(cluster_id)]);
+            
+            % Save as .fig
+            savefig(fig, [base_filename '.fig']);
+            
+            % Save as .png
+            saveas(fig, [base_filename '.png']);
+            
+            % Optional: Save rotating GIF
+            gif_filename = [base_filename '.gif'];
+            for angle = 0:5:360
+                view(angle, 30);
+                drawnow;
+                frame = getframe(fig);
+                img = frame2im(frame);
+                [imind, cm] = rgb2ind(img, 256);
+                if angle == 0
+                    imwrite(imind, cm, gif_filename, 'gif', 'Loopcount', inf, 'DelayTime', 0.05);
+                else
+                    imwrite(imind, cm, gif_filename, 'gif', 'WriteMode', 'append', 'DelayTime', 0.05);
+                end
+            end
         end
 
     otherwise
-        disp('other value')
+        disp('other value when you have not given appropriate choose value:')
  end
 
 

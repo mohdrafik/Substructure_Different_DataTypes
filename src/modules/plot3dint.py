@@ -69,8 +69,15 @@ def plot3dinteractive(voldata, keyvalue, sample_fraction):
 
 if __name__ =="__main__":
     import os
+    from pathlib import Path
+  
+    cws = Path(__file__).resolve().parent   # use it everywhere for current working scripts path (cws)
+    BASE_DIR = cws.parent.parent
+    DATA_PATH = BASE_DIR/"data" 
+    rawnypyData_Path = DATA_PATH/"raw_npyData"
 
-    data_dir = r"C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\data\intermdata1"
+    data_dir = str(rawnypyData_Path)
+    # print(f"here we will see step by step all mid paths --> \n cws :{cws} \n BASE_DIR:{BASE_DIR} \n DATA_PATH: {DATA_PATH} \n rawnypyData_Path:{rawnypyData_Path} \n ")
 
     # List all .npy files
     npy_files = [f for f in os.listdir(data_dir) if f.endswith(".npy")]

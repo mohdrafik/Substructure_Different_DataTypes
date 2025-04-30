@@ -1,75 +1,46 @@
+# src/path_manager.py
 import sys
-import os
 from pathlib import Path
 
-class AddPath:
+def addpath():
     """
-    Adds 'src/modules' to sys.path, automatically detects your project root from notebooks.
+    use Case:
+    1.Use It in Jupyter:
+        from path_manager import addpath
+        paths = addpath()
+        # Use the returned dictionary if needed
+        print("Base dir:", paths['BASE_DIR'])
+
+    2. Use in Python Script:
+        from path_manager import addpath
+        addpath()
+        # Then import modules
+
+    Automatically adds 'src' and 'src/modules' to sys.path.
+    Works in both Jupyter and .py scripts.
+    Returns the base, src, and modules paths.
     """
+    try:
+        # Script mode
+        base_dir = Path(__file__).resolve().parent.parent
+    except NameError:
+        # Jupyter mode — use notebook location
+        base_dir = Path.cwd()
+        # Adjust if running inside notebooks/ or src/
+        if base_dir.name == 'notebooks' or base_dir.name == 'src':
+            base_dir = base_dir.parent
 
-    def __init__(self):
-        self.BASE_DIR = self.get_project_root()
-        self.module_path = self.find_module_path()
-        self.add_to_sys_path()
+    # Construct target paths
+    src_path = base_dir / 'src'
+    modules_path = src_path / 'modules'
 
-    def get_project_root(self):
-        """
-        Returns the assumed project root (parent of notebooks/).
-        """
-        cwd = Path.cwd()
-        if cwd.name.lower() == 'notebooks':
-            return cwd.parent
-        return cwd  # fallback if not running inside notebooks
+    # Add to sys.path if not already there
+    for path in [src_path, modules_path]:
+        if path.exists() and str(path) not in sys.path:
+            sys.path.insert(0, str(path))
 
-    def find_module_path(self):
-        """
-        Constructs 'src/modules' path relative to BASE_DIR
-        """
-        module_path = self.BASE_DIR / "src" / "modules"
-        if module_path.exists():
-            print(f"✅ Using module path: {module_path}")
-            return str(module_path)
-        else:
-            print("❌ 'src/modules' directory not found.")
-            return None
-
-    def add_to_sys_path(self):
-        """
-        Adds module path to sys.path if not already present.
-        """
-        if self.module_path and self.module_path not in sys.path:
-            sys.path.append(self.module_path)
-            print(f"🔄 Module path added to sys.path: {self.module_path}")
-        elif self.module_path:
-            print(f"✅ Module path already in sys.path: {self.module_path}")
-        else:
-            print("⚠ Skipped sys.path update because module path was not found.")
-
-if __name__=="__main__":
-    from path_manager import AddPath
-    AddPath()
-
-
-# import sys
-# import os
-# from pathlib import Path
-
-# class AddPath:
-#     def __init__(self):
-#         self.base_dir = Path(__file__).resolve().parent  # This is src/
-#         self.module_path = self.base_dir / "modules"
-#         self.add_module_path()
-
-#     def add_module_path(self):
-#         if not self.module_path.exists():
-#             print(f"❌ Module path does not exist: {self.module_path}")
-#             return
-
-#         if str(self.module_path) not in sys.path:
-#             sys.path.append(str(self.module_path))
-#             print(f"✅ Module path added to sys.path: {self.module_path}")
-#         else:
-#             print(f"⚠ Module path already in sys.path: {self.module_path}")
-
-# # from path_manager import AddPath
-# # AddPath()
+    return {
+        "BASE_DIR": base_dir,
+        "SRC_PATH": src_path,
+        "MODULES_PATH": modules_path
+    }

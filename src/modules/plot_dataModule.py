@@ -113,11 +113,12 @@ class DataPlotter:
 
         print(f"All plots completed in {time.time() - t_start:.2f} seconds.")
 
-if __name__ =="__main__":
+if __name__ == "__main__":
 
-    from plot_dataModule import DataPlotter
+    # from plot_dataModule import DataPlotter
 
     plotter = DataPlotter(
+        # __init__(self, data_dir, base_dir=None, save_results=True, save_dir=None)
         data_dir="data/raw_npyData",  # relative to BASE_DIR
         base_dir="E:/Projects/substructure_3d_data/Substructure_Different_DataTypes"
     )

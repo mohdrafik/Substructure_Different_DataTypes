@@ -36,10 +36,11 @@ class DataSaver:
         print(f"✅ Saved metadata to: {save_path}")
 
 
+
 # Example usage
 if __name__ == "__main__":
 
-    from data_saver_module import DataSaver
+    from data_saver_module import DataSaver  # Import the DataSaver class
 
     # Create saver with custom fields to include
     saver = DataSaver(save_dir="results/histogram_significantDigits/", include_fields=["filename", "x_axis_max"])

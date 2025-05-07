@@ -26,14 +26,21 @@ class DataSaver:
         for entry in data_list:
             if self.include_fields:
                 filtered_entry = {k: v for k, v in entry.items() if k in self.include_fields}
+                # {k: v for k, v in entry.items() if k in self.include_fields} this is equivalent to the below code.
+                # filtered_entry = {}
+                # for k, v in entry.items():
+                #     if k in ["filename", "counts"]:
+                #         filtered_entry[k] = v
+
             else:
-                filtered_entry = entry
+                filtered_entry = entry # No filtering if include_fields is empty means save all fields like we can say from example  usage all fields from metadata_list are included.
+
             filtered_data.append(filtered_entry)
 
         save_path = self.save_dir / self.filename
         with open(save_path, 'w') as f:
             json.dump(filtered_data, f, indent=4)
-        print(f"✅ Saved metadata to: {save_path}")
+        print(f" Saved metadata to: {save_path}")
 
 
 

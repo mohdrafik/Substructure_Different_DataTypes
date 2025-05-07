@@ -140,7 +140,7 @@ class DataPlotter:
         bars = ax.bar(x, y, width=0.9, color=colors, edgecolor='black', linewidth=1.2)
 
         for xi, count in zip(x, counts):
-            ax.text(xi, 1.008, f"{count}", ha='center', va='bottom', fontsize=8, fontweight='bold')
+            ax.text(xi, 1.008, f"{count}", ha='center', va='bottom', fontsize=4, fontweight='bold')
 
         ax.set_xlabel(xlabel if xlabel else "Significant Digits", fontsize=11, fontweight='bold')
         ax.set_ylabel(ylabel if ylabel else "Normalized Count (1 per bin)", fontsize=11, fontweight='bold')
@@ -199,7 +199,7 @@ class DataPlotter:
         colors = []
         for c in counts:
             if c <= very_low_thresh:
-                colors.append("lightgray")
+                colors.append("darkred")
             elif c < low_thresh:
                 colors.append("skyblue")
             elif c < high_thresh:
@@ -227,7 +227,7 @@ class DataPlotter:
         ax.set_yticks(digits)
 
         legend_elements = [
-            Patch(facecolor='lightgray', edgecolor='black', label='Very Low'),
+            Patch(facecolor='darkred', edgecolor='black', label='Very Low'),
             Patch(facecolor='skyblue', edgecolor='black', label='Low'),
             Patch(facecolor='gold', edgecolor='black', label='Moderate'),
             Patch(facecolor='salmon', edgecolor='black', label='High')

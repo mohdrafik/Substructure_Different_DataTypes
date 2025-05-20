@@ -134,10 +134,10 @@ switch choose
         end
 
     otherwise
-        disp('⚠ Invalid input. Choose 0 or 1.');
+        disp(' Invalid input. Choose 0 or 1.');
 end
 
-fprintf('\n✅ All processing and visualizations are complete.\n');
+fprintf('\n All processing and visualizations are complete.\n');
 end
 
 

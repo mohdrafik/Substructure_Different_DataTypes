@@ -1,9 +1,63 @@
 import numpy as np
+import os
+from skimage.filters import threshold_otsu
 
 class DataPreprocessor:
     """
     A class for preprocessing data, including methods for analyzing and extracting features.
     """
+    """
+    A class for preprocessing data with support for methods like Otsu segmentation,
+    peak detection using Freedman-Diaconis rule, quantile filtering, etc.
+    Easily extendable for future preprocessing techniques.
+    
+    """
+
+    def __init__(self, data, metadata=None):
+        if not isinstance(data, np.ndarray):
+            raise ValueError("Data must be a numpy ndarray")
+        self.data = data
+        self.results = {}
+        self.metadata = metadata or {}
+
+    def apply_otsu_segmentation(self, save_masks_to=None):
+        """
+        Apply Otsu's thresholding method to segment foreground from background.
+        Optionally save foreground and background masks as .npy files.
+        """
+        flat_data = self.data[self.data > 0].flatten()
+        threshold = threshold_otsu(flat_data)
+        fg_mask = self.data > threshold
+        bg_mask = ~fg_mask
+
+        if save_masks_to:
+            os.makedirs(save_masks_to, exist_ok=True)
+            np.save(os.path.join(save_masks_to, "fg_mask.npy"), fg_mask)
+            np.save(os.path.join(save_masks_to, "bg_mask.npy"), bg_mask)
+
+        self.results['otsu'] = {
+            'threshold': threshold,
+            'fg_mask': fg_mask,
+            'bg_mask': bg_mask
+        }
+        return self.results['otsu']
+
+    def apply_quantile_thresholding(self, lower_q=0.05, upper_q=0.95):
+        """
+        Apply quantile-based thresholding. Returns filtered data.
+        """
+        lower = np.quantile(self.data, lower_q)
+        upper = np.quantile(self.data, upper_q)
+        mask = (self.data >= lower) & (self.data <= upper)
+        filtered_data = self.data[mask]
+
+        self.results['quantile'] = {
+            'lower_bound': lower,
+            'upper_bound': upper,
+            'filtered_data': filtered_data,
+            'mask': mask
+        }
+        return self.results['quantile']
 
     @staticmethod
     def find_peak_bin(data, threshold_ratio=None):

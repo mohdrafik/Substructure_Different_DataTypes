@@ -143,7 +143,7 @@ def npy2mat(datapath,outputdatapath):
     # Save to .mat file (with a variable name)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
     # datapath = input("enter the data path:(press enter for use default path):").strip()
     # if not datapath:

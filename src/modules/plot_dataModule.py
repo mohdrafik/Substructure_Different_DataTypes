@@ -7,6 +7,12 @@ from collections import Counter
 from pathlib import Path
 from matplotlib.patches import Patch
 
+import open3d as o3d
+import imageio.v2 as imageio
+from skimage.filters import threshold_otsu
+from skimage.measure import marching_cubes
+from scipy.ndimage import gaussian_filter
+
 # from path_manager import addpath
 # addpath()  # custom module to add paths this is not needed in this case because this module is in the same directory as the plot_dataModule.py script
 
@@ -48,6 +54,7 @@ class DataPlotter:
     def _generate_save_path(self, filename_stem, suffix=".png"):
         return self.save_dir / f"{filename_stem}{suffix}"
 
+#################################################################################################################
     def plot_simple(self, file, save_name=None):
         data = np.load(file).flatten().reshape(-1, 1)
         x_data = np.linspace(data.min(), data.max(), len(data))
@@ -64,6 +71,7 @@ class DataPlotter:
 
         plt.close()
 
+#################################################################################################################
     def plot_complex(self, file, save_name=None):
         data = np.load(file).flatten()
         x_data = np.linspace(data.min(), data.max(), len(data))
@@ -80,22 +88,42 @@ class DataPlotter:
         flat_min, flat_max, flat_mean = flat_band.min(), flat_band.max(), flat_band.mean()
 
         plt.figure(figsize=(10, 6))
-        scatter = plt.scatter(x_data, data, c=data, cmap='viridis', s=0.5)
+        scatter = plt.scatter(x_data, data, c=data, cmap='viridis', s=0.4)
 
-        flat_y_vals = [("Min", flat_min, 'red'), ("Mean", flat_mean, 'orange'), ("Max", flat_max, 'green')]
+        flat_y_vals = [("Min", flat_min, 'red'), ("Mean", flat_mean, 'blue'), ("Max", flat_max, 'black')]
         used_y = []
-        for label, y_val, color in flat_y_vals:
-            plt.axhline(y=y_val, color=color, linestyle='--', linewidth=1)
-            offset = 0
-            while any(abs((y_val + offset) - y) < 0.002 * (flat_max - flat_min) for y in used_y):
-                offset += 0.002 * (flat_max - flat_min)
-            y_text = y_val + offset
-            used_y.append(y_text)
-            plt.text(x_data[0], y_text, f'{label}: {y_val:.8f}', color=color, fontsize=8, verticalalignment='bottom')
+        x_text_position = x_data[0] - 0.0002*(x_data[-1] - x_data[0])  # shift right
+    
+        if file[-5:-4] =='h':
+            text_gap = 0.12* max(abs(flat_max - flat_min), 1e-1)  # vertical spacing
+        else:
+            text_gap = 0.05* max(abs(flat_max - flat_min), 1e-1)  # vertical spacing
+            
 
-        plt.title(f"{file.stem} Linearly Spaced Vector")
+        for i, (label, y_val, color) in enumerate(flat_y_vals):
+            y_text = y_val + i * text_gap  # stagger vertically (fixed gap)
+            plt.axhline(y=y_val, color=color, linestyle='--', linewidth=0.6)
+
+            plt.text(x_text_position, y_text, f'{label}: {y_val:.16f}',
+                    color=color, fontsize=8,
+                    verticalalignment='bottom', horizontalalignment='left',
+                    bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
+        
+
+
+
+        # for label, y_val, color in flat_y_vals:
+        #     plt.axhline(y=y_val, color=color, linestyle='--', linewidth=1)
+        #     offset = 0
+        #     while any(abs((y_val + offset) - y) < 0.002 * (flat_max - flat_min) for y in used_y):
+        #         offset += 0.002 * (flat_max - flat_min)
+        #     y_text = y_val + offset
+        #     used_y.append(y_text)
+        #     plt.text(x_data[0], y_text, f'{label}: {y_val:.8f}', color=color, fontsize=8, verticalalignment='bottom')
+
+        plt.title(f"{file.stem}")
         plt.xlabel('Linearly spaced vector from data')
-        plt.ylabel('Original Values')
+        plt.ylabel(f" RI value ")
         plt.grid(True)
         cbar = plt.colorbar(scatter)
         cbar.set_label('Intensity')
@@ -104,9 +132,13 @@ class DataPlotter:
             save_path = self._generate_save_path(save_name or file.stem + '_marked')
             plt.tight_layout()
             plt.savefig(save_path, dpi=300)
+            print(f"Plot saved at: {save_path}")
 
+        plt.show()
         plt.close()
 
+
+#################################################################################################################
     @staticmethod
     def plot_histogram_with_annotate_counts(counts, values, title=None, xlabel=None, ylabel=None, saveplot=False, filename=None, save_dir=None, dpi=600):
         
@@ -170,6 +202,7 @@ class DataPlotter:
 
         plt.show()
 
+#################################################################################################################
     @staticmethod
     def plot_horizontal_split_histogram(significant_digit_data, title=None, xlabel=None, ylabel=None, saveplot=False, filename=None, save_dir=None, dpi=600):
         """
@@ -261,6 +294,114 @@ class DataPlotter:
 
         print(f"All plots completed in {time.time() - t_start:.2f} seconds.")
 
+#################################################################################################################
+    @staticmethod
+    def visualize_and_export_3d_mesh(fg_mask, data, smoothing=None, title=None,
+                                     save_obj_path=None,
+                                     save_png_path=None,
+                                     save_gif_path=None,
+                                     rotate_and_capture=False,
+                                     gif_frames=36):
+        """
+        Visualize a 3D mesh from a 3D numpy array using Open3D. 
+        Optionally save the mesh as an OBJ file and capture images or GIFs.
+        Args:
+            fg_mask (numpy.ndarray): Foreground mask (3D numpy array).
+            data (numpy.ndarray): 3D numpy array to visualize.                      
+            smoothing (float, optional): Smoothing factor for Gaussian filter. smoothing= 0.5,1.0 etc
+            title (str, optional): Title for the visualization window.
+            save_obj_path (str, optional): Path to save the OBJ file.
+            save_png_path (str, optional): Path to save the PNG image.
+            save_gif_path (str, optional): Path to save the GIF.
+            rotate_and_capture (bool, optional): Whether to rotate the view and capture frames for GIF.
+            gif_frames (int, optional): Number of frames for the GIF.
+
+        """
+
+
+        if not np.any(fg_mask):
+            print(" Foreground mask is empty. Skipping visualization.")
+            return
+
+        if smoothing is not None:
+            data = gaussian_filter(data * fg_mask, sigma=smoothing)
+
+        else:
+            data = data * fg_mask
+
+        verts, faces, _, _ = marching_cubes(data, level=0)
+
+        mesh = o3d.geometry.TriangleMesh()
+        mesh.vertices = o3d.utility.Vector3dVector(verts)
+        mesh.triangles = o3d.utility.Vector3iVector(faces)
+
+        if smoothing is not None:
+            mesh = mesh.filter_smooth_laplacian(number_of_iterations=5)
+        
+        mesh.compute_vertex_normals()
+        mesh.paint_uniform_color([0.7, 0.9, 1.0])
+
+        fg_points = np.argwhere(fg_mask)
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(fg_points)
+        pcd.paint_uniform_color([1.0, 0.7, 0.3])
+
+        vis = o3d.visualization.Visualizer()
+        vis.create_window(window_name=title, width=1024, height=768, visible=True)
+        vis.add_geometry(mesh)
+        vis.add_geometry(pcd)
+
+        opt = vis.get_render_option()
+        opt.background_color = np.asarray([1, 1, 1])
+        opt.mesh_show_back_face = True
+        opt.point_size = 2.5
+
+        vis.poll_events()
+        vis.update_renderer()
+        ctr = vis.get_view_control()
+
+        if save_png_path:
+            vis.capture_screen_image(save_png_path)
+            print(f"📸 PNG saved: {save_png_path}")
+
+        if rotate_and_capture and save_gif_path:
+            images = []
+            tmp_paths = []
+            for i in range(gif_frames):
+                ctr.rotate(10.0, 0.0)
+                vis.poll_events()
+                vis.update_renderer()
+                tmp_path = f"_tmp_frame_{i:03d}.png"
+                vis.capture_screen_image(tmp_path)
+                images.append(imageio.imread(tmp_path))
+                tmp_paths.append(tmp_path)
+
+            imageio.mimsave(save_gif_path, images, duration=0.1)
+            print(f" GIF saved: {save_gif_path}")
+
+            for p in tmp_paths:
+                if os.path.exists(p):
+                    os.remove(p)
+
+        if save_obj_path:
+            o3d.io.write_triangle_mesh(save_obj_path, mesh)
+            print(f" OBJ saved: {save_obj_path}")
+
+        # these two lines require manuual closing of the window
+        # vis.run()  # ❌ This keeps the window open until you close it manually
+        # vis.destroy_window()
+
+        # Instead, we can use a loop to keep the window open for a short time
+        # and then close it automatically
+        vis.poll_events()
+        vis.update_renderer()
+        time.sleep(3)  # Keep the window open for 2 seconds
+        vis.destroy_window()
+
+
+#################################################################################################################
+
+
 
 if __name__ == "__main__":
 
@@ -273,9 +414,6 @@ if __name__ == "__main__":
     )
     plotter.run_all(complex_plot=True)
 
-
-
-    from plot_dataModule import DataPlotter
 
     # Example data usage
     from plot_dataModule import DataPlotter

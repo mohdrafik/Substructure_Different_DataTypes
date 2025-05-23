@@ -110,8 +110,6 @@ class DataPlotter:
                     bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
         
 
-
-
         # for label, y_val, color in flat_y_vals:
         #     plt.axhline(y=y_val, color=color, linestyle='--', linewidth=1)
         #     offset = 0
@@ -388,7 +386,7 @@ class DataPlotter:
             print(f" OBJ saved: {save_obj_path}")
 
         # these two lines require manuual closing of the window
-        # vis.run()  # ❌ This keeps the window open until you close it manually
+        # vis.run()  #  This keeps the window open until you close it manually
         # vis.destroy_window()
 
         # Instead, we can use a loop to keep the window open for a short time
@@ -401,7 +399,6 @@ class DataPlotter:
 #################################################################################################################
     # @staticmethod
     # def QunatileBasedThrseholdingVisualization():
-
 
 
 if __name__ == "__main__":

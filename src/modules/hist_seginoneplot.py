@@ -77,9 +77,9 @@ class HistogramAnalyzer:
 
 if __name__ == "__main__":
     path = input("Enter the path to your .npy or .mat files: ")
+
     analyzer = HistogramAnalyzer(path)
     analyzer.process_all_files()
-
 
 
 

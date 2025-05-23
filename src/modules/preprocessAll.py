@@ -2,7 +2,7 @@ import numpy as np
 import os
 from skimage.filters import threshold_otsu
 import matplotlib.pyplot
-
+from scipy.stats import norm
 from itertools import cycle
 from path_manager import addpath
 addpath()
@@ -190,94 +190,180 @@ class DataPreprocessor:
         
 ###############################################################################################
     @staticmethod
-    def QuantileBased_AutoThres():
-        pass
+    def plot_histograms_from_directory(path, bins=800):
+        import  matplotlib.pyplot as plt
+        from pathlib import Path
+        """
+            Processes all .mat and .npy files in the specified directory.
+            For each file, this method:
+            - Loads and flattens the data
+            - Filters out zero values
+            - Plots histogram with envelope (frequency)
+            - Fits and plots a Gaussian distribution over the data histogram
 
+            Saves both plots as PNG files into a results subdirectory.
+
+            Args:
+                path (str or Path): Directory path containing the .mat or .npy files.
+                bins (int): Number of bins to use for the histogram plots.
+        """
+
+        path = Path(path)
+        results_dir = path / "results" / "histogramrawData"
+        results_dir.mkdir(parents=True, exist_ok=True)
+
+        files = [f for f in os.listdir(path) if f.endswith('.mat') or f.endswith('.npy')]
+        print(f"Number of data files found: {len(files)}")
+
+        for count, filename in enumerate(files, 1):
+            print(f"Processing file {count}: {filename}")
+            filepath = path / filename
+
+            if filename.endswith('.mat'):
+                datastruct = sio.loadmat(filepath)
+                choose_keyVal = int(input(f"File {filename}: Enter 1 for 'elem_double' or 0 for 'mat_temp': "))
+                data = datastruct['elem_double'] if choose_keyVal == 1 else datastruct['mat_temp']
+            else:
+                data = np.load(filepath)
+
+            data = np.array(data).flatten()
+            data = data[data != 0]
+
+            clean_filename = filename.replace('.mat', '').replace('.npy', '')
+
+            # Plot histogram with envelope
+            plt.figure(figsize=(6, 5))
+            counts, edges, _ = plt.hist(data, bins=bins, color='white', alpha=0.7, edgecolor='white')
+            plt.fill_between(edges[:-1], counts, color='None', edgecolor='blue', alpha=0.7)
+            plt.title('Envelope of data distribution')
+            plt.xlabel('Value')
+            plt.ylabel('Frequency')
+            plt.tight_layout()
+            envelope_path = results_dir / f"{clean_filename}_hist_envelope.png"
+            plt.savefig(envelope_path, dpi=400, bbox_inches='tight')
+            plt.close()
+            print(f"Saved histogram and envelope: {envelope_path}")
+
+            # Gaussian fit
+            counts, bin_edges = np.histogram(data, bins=bins)
+            mu, std = norm.fit(data)
+            plt.figure(figsize=(6, 5))
+            plt.hist(data, bins=bins, density=True, alpha=0.6, color='g', edgecolor='black')
+            xmin, xmax = plt.xlim()
+            x = np.linspace(xmin, xmax, 1000)
+            p = norm.pdf(x, mu, std)
+            plt.plot(x, p, 'k', linewidth=2)
+            plt.title(f"Gaussian Fit: μ={mu:.4f}, σ={std:.4f}")
+            plt.xlabel('Value')
+            plt.ylabel('Density')
+            plt.tight_layout()
+            peak_path = results_dir / f"{clean_filename}_gaussian_peak.png"
+            plt.savefig(peak_path, dpi=400, bbox_inches='tight')
+            plt.close()
+            print(f"Saved Gaussian peak fit: {peak_path}")
 
 
 
 ###############################################################################################
     @staticmethod
-    def QunatilebasedAutothesholdPlot(data,n_peaks = None, colors = None):
+    def quantile_based_auto_threshold_plot(data, n_peaks=4, colors=None, show_subplots=False, save_dir=None):
+        import matplotlib.pyplot as plt
 
-        # def __init__(self, data, n_peaks=4, colors=None):
-        # self.data = data
-        # self.n_peaks = n_peaks
-        # self.colors = colors if colors else self._generate_colors(n_peaks)
+        """
+        Generates histograms based on quantile thresholds.
+
+        Args:
+            data (np.ndarray): Input data.
+            n_peaks (int): Number of quantile thresholds to use.
+            colors (list[str], optional): List of colors. Auto-generated if None.
+            show_subplots (bool): If True, show subplots; otherwise, show a single overlay plot.
+            save_dir (str or Path, optional): If provided, saves plots to this directory.
+
+        Returns:
+            list[dict]: List of computed quantile information (quantile, threshold, filtered_data, color).
+        """
+        def generate_colors(n):
+            default_colors = ['red', 'blue', 'green', 'purple', 'orange', 'cyan', 'brown', 'magenta', 'olive']
+            return default_colors[:n] if n <= len(default_colors) else [default_colors[i % len(default_colors)] for i in range(n)]
+
+        import os
+        from pathlib import Path
+        if save_dir:
+            save_dir = Path(save_dir)
+            save_dir.mkdir(parents=True, exist_ok=True)
 
         qvalues = []
+        colors = colors or generate_colors(n_peaks)
 
-        def _generate_colors(self, n):
-            """Automatically extend color list if not provided."""
-            default_colors = ['red', 'blue', 'green', 'purple', 'orange', 'cyan', 'brown', 'magenta', 'olive']
-            if n <= len(default_colors):
-                return default_colors[:n]
-            else:
-                color_cycle = cycle(default_colors)
-                return [next(color_cycle) for _ in range(n)]
+        for i in range(1, n_peaks + 1):
+            qi = 1 / i
+            threshold = np.quantile(data, qi)
+            filtered_data = data[data > threshold]
+            qvalues.append({
+                "quantile": qi,
+                "threshold": threshold,
+                "filtered_data": filtered_data,
+                "color": colors[i - 1]
+            })
 
-        def compute_quantiles(self):
-            self.qvalues.clear()
-            for i in range(1, self.n_peaks + 1):
-                qi = 1 / i
-                threshold = np.quantile(self.data, qi)
-                filtered_data = self.data[self.data > threshold]
-                self.qvalues.append({
-                    "quantile": qi,
-                    "threshold": threshold,
-                    "filtered_data": filtered_data,
-                    "color": self.colors[i - 1]
-                })
-
-        def plot_overlaid_histogram(self):
+        if not show_subplots:
             plt.figure(figsize=(10, 6))
-            plt.hist(self.data, bins='fd', alpha=0.6, label='Original Data', color='gray', edgecolor='black')
-
-            for q in self.qvalues:
+            plt.hist(data, bins='fd', alpha=0.6, label='Original Data', color='gray', edgecolor='black')
+            for q in qvalues:
                 plt.hist(q["filtered_data"], bins='fd', alpha=0.3, color=q["color"], label=f'> Q_{q["quantile"]:.2f}')
                 plt.axvline(q["threshold"], linestyle='--', color=q["color"], linewidth=1.5,
                             label=f'Q_{q["quantile"]:.2f} = {q["threshold"]:.2f}')
-
             plt.title("Histogram with Quantile Thresholds")
             plt.xlabel("Value")
             plt.ylabel("Frequency")
             plt.legend()
             plt.grid(True)
             plt.tight_layout()
+            if save_dir:
+                plt.savefig(save_dir / "quantile_overlaid_histogram.png", dpi=300)
             plt.show()
-
-        def plot_subplots(self):
-            n = len(self.qvalues) + 1
+        else:
+            n = len(qvalues) + 1
             cols = 2
             rows = (n + 1) // cols
-
             fig, axs = plt.subplots(rows, cols, figsize=(12, rows * 4))
             axs = axs.flatten()
 
-            # Main plot with all overlays
-            axs[0].hist(self.data, bins='fd', alpha=0.6, color='gray', label='Original Data', edgecolor='black')
-            for q in self.qvalues:
+            axs[0].hist(data, bins='fd', alpha=0.6, color='gray', label='Original Data', edgecolor='black')
+            for q in qvalues:
                 axs[0].hist(q["filtered_data"], bins='fd', alpha=0.3, color=q["color"], label=f'> Q_{q["quantile"]:.2f}')
                 axs[0].axvline(q["threshold"], linestyle='--', color=q["color"], linewidth=1.5,
-                            label=f'Q_{q["quantile"]:.2f} = {q["threshold"]:.2f}')
-            axs[0].set_title("Original Histogram with Quantile Overlays")
+                               label=f'Q_{q["quantile"]:.2f} = {q["threshold"]:.2f}')
             axs[0].legend()
             axs[0].grid(True)
+            axs[0].set_title("Histogram with Quantile Overlays")
 
-            # Individual quantile subplots
-            for idx, q in enumerate(self.qvalues, 1):
+            for idx, q in enumerate(qvalues, 1):
                 axs[idx].hist(q["filtered_data"], bins='fd', alpha=0.6, color=q["color"], edgecolor='black')
                 axs[idx].axvline(q["threshold"], linestyle='--', color='black', linewidth=1.2,
-                                label=f'Threshold = {q["threshold"]:.2f}')
-                axs[idx].set_title(f"Filtered Data > Q_{q['quantile']:.2f}")
+                                 label=f'Threshold = {q["threshold"]:.2f}')
                 axs[idx].legend()
                 axs[idx].grid(True)
+                axs[idx].set_title(f"Filtered Data > Q_{q['quantile']:.2f}")
 
             for ax in axs[n:]:
                 ax.set_visible(False)
 
             plt.tight_layout()
+            if save_dir:
+                plt.savefig(save_dir / "quantile_subplots.png", dpi=300)
             plt.show()
+
+        return qvalues
+    # example usage 
+    # qvalues = DataPreprocessor.quantile_based_auto_threshold_plot(
+    #     data=my_array,
+    #     n_peaks=4,
+    #     show_subplots=True,
+    #     save_dir="results/quantile_plots"
+    # )
+
+
 
 
         

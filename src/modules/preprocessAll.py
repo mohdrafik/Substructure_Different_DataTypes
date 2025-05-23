@@ -1,12 +1,17 @@
 import numpy as np
 import os
 from skimage.filters import threshold_otsu
+import matplotlib.pyplot
+
+from itertools import cycle
+from path_manager import addpath
+addpath()
+
 
 class DataPreprocessor:
     """
     A class for preprocessing data, including methods for analyzing and extracting features.
-    """
-    """
+    
     A class for preprocessing data with support for methods like Otsu segmentation,
     peak detection using Freedman-Diaconis rule, quantile filtering, etc.
     Easily extendable for future preprocessing techniques.
@@ -182,4 +187,100 @@ class DataPreprocessor:
             'selected_indices': selected_idx,
             'peak_bin_index': peak_bin_idx
         }
-        return result
+        
+###############################################################################################
+    @staticmethod
+    def QuantileBased_AutoThres():
+        pass
+
+
+
+
+###############################################################################################
+    @staticmethod
+    def QunatilebasedAutothesholdPlot(data,n_peaks = None, colors = None):
+
+        # def __init__(self, data, n_peaks=4, colors=None):
+        # self.data = data
+        # self.n_peaks = n_peaks
+        # self.colors = colors if colors else self._generate_colors(n_peaks)
+
+        qvalues = []
+
+        def _generate_colors(self, n):
+            """Automatically extend color list if not provided."""
+            default_colors = ['red', 'blue', 'green', 'purple', 'orange', 'cyan', 'brown', 'magenta', 'olive']
+            if n <= len(default_colors):
+                return default_colors[:n]
+            else:
+                color_cycle = cycle(default_colors)
+                return [next(color_cycle) for _ in range(n)]
+
+        def compute_quantiles(self):
+            self.qvalues.clear()
+            for i in range(1, self.n_peaks + 1):
+                qi = 1 / i
+                threshold = np.quantile(self.data, qi)
+                filtered_data = self.data[self.data > threshold]
+                self.qvalues.append({
+                    "quantile": qi,
+                    "threshold": threshold,
+                    "filtered_data": filtered_data,
+                    "color": self.colors[i - 1]
+                })
+
+        def plot_overlaid_histogram(self):
+            plt.figure(figsize=(10, 6))
+            plt.hist(self.data, bins='fd', alpha=0.6, label='Original Data', color='gray', edgecolor='black')
+
+            for q in self.qvalues:
+                plt.hist(q["filtered_data"], bins='fd', alpha=0.3, color=q["color"], label=f'> Q_{q["quantile"]:.2f}')
+                plt.axvline(q["threshold"], linestyle='--', color=q["color"], linewidth=1.5,
+                            label=f'Q_{q["quantile"]:.2f} = {q["threshold"]:.2f}')
+
+            plt.title("Histogram with Quantile Thresholds")
+            plt.xlabel("Value")
+            plt.ylabel("Frequency")
+            plt.legend()
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+
+        def plot_subplots(self):
+            n = len(self.qvalues) + 1
+            cols = 2
+            rows = (n + 1) // cols
+
+            fig, axs = plt.subplots(rows, cols, figsize=(12, rows * 4))
+            axs = axs.flatten()
+
+            # Main plot with all overlays
+            axs[0].hist(self.data, bins='fd', alpha=0.6, color='gray', label='Original Data', edgecolor='black')
+            for q in self.qvalues:
+                axs[0].hist(q["filtered_data"], bins='fd', alpha=0.3, color=q["color"], label=f'> Q_{q["quantile"]:.2f}')
+                axs[0].axvline(q["threshold"], linestyle='--', color=q["color"], linewidth=1.5,
+                            label=f'Q_{q["quantile"]:.2f} = {q["threshold"]:.2f}')
+            axs[0].set_title("Original Histogram with Quantile Overlays")
+            axs[0].legend()
+            axs[0].grid(True)
+
+            # Individual quantile subplots
+            for idx, q in enumerate(self.qvalues, 1):
+                axs[idx].hist(q["filtered_data"], bins='fd', alpha=0.6, color=q["color"], edgecolor='black')
+                axs[idx].axvline(q["threshold"], linestyle='--', color='black', linewidth=1.2,
+                                label=f'Threshold = {q["threshold"]:.2f}')
+                axs[idx].set_title(f"Filtered Data > Q_{q['quantile']:.2f}")
+                axs[idx].legend()
+                axs[idx].grid(True)
+
+            for ax in axs[n:]:
+                ax.set_visible(False)
+
+            plt.tight_layout()
+            plt.show()
+
+
+        
+   
+
+

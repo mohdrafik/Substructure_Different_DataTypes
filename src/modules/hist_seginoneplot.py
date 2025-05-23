@@ -6,7 +6,8 @@ from scipy.stats import norm
 from pathlib import Path
 
 class HistogramAnalyzer:
-    def __init__(self, path):
+    
+    def __init__(self, path,bins = 'fd'):
         self.path = Path(path)
         self.results_dir = self.path / "results" / "histogramrawData"
         self.results_dir.mkdir(parents=True, exist_ok=True)

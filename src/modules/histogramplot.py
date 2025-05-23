@@ -76,7 +76,7 @@ def plot_normalizedata_hist(normalized_data, datakey, output_path=None):
 
     if output_path:
         plt.savefig(output_path, dpi=300)
-        print(f"📁 Plot saved to: {output_path}")
+        print(f"Plot saved to: {output_path}")
     plt.show()
 
 

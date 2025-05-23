@@ -362,7 +362,7 @@ class DataPlotter:
 
         if save_png_path:
             vis.capture_screen_image(save_png_path)
-            print(f"📸 PNG saved: {save_png_path}")
+            print(f"PNG saved: {save_png_path}")
 
         if rotate_and_capture and save_gif_path:
             images = []
@@ -398,8 +398,9 @@ class DataPlotter:
         time.sleep(3)  # Keep the window open for 2 seconds
         vis.destroy_window()
 
-
 #################################################################################################################
+    # @staticmethod
+    # def QunatileBasedThrseholdingVisualization():
 
 
 

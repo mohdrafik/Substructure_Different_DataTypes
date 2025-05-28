@@ -1,11 +1,18 @@
 import numpy as np
 import os
+from scipy.signal import find_peaks
+from scipy.stats import norm, gaussian_kde
+from sklearn.mixture import GaussianMixture
 from skimage.filters import threshold_otsu
-import matplotlib.pyplot
-from scipy.stats import norm
+import matplotlib.pyplot as plt
 from itertools import cycle
+from pathlib import Path
+
+
 from path_manager import addpath
 addpath()
+
+import scipy.io as sio
 
 
 class DataPreprocessor:
@@ -63,6 +70,150 @@ class DataPreprocessor:
             'mask': mask
         }
         return self.results['quantile']
+
+########## --Binwidth explorer and finding the peaks automatically from the data, this can be generalize ##########
+
+class BinWidthExplorer(DataPreprocessor):
+    def __init__(self, data, metadata=None):
+        super().__init__(data, metadata)
+        self.data = self.data.flatten() if self.data.ndim == 3 else self.data
+
+    def evaluate_binwidth_range(self, decimal_place, plot=False, save_dir=None, target_peak=None, tolerance=None):
+        min_bw = 10 ** -(decimal_place + 1)
+        max_bw = 10 ** -(decimal_place)
+        bw_list = np.linspace(min_bw, max_bw, 20)
+
+        best_match = {
+            'binwidth': None,
+            'peak_count': -1,
+            'peak_value': None,
+            'peak_bin_edges': None,
+            'hist': None,
+            'edges': None
+        }
+
+        for i, bw in enumerate(bw_list):
+            data_min, data_max = self.data.min(), self.data.max()
+            num_bins = int((data_max - data_min) / bw) + 1
+
+            counts, edges = np.histogram(self.data, bins=num_bins)
+            bin_centers = 0.5 * (edges[:-1] + edges[1:])   # centers(represents the approximate values) of each bin size equal to the counts.
+            peak_idx = np.argmax(counts)
+            peak_val = bin_centers[peak_idx]
+
+            # This given if statement with target_peak: ensures that only those binwidths are considered whose resulting peak is close to your target value, defined by:
+                # target_peak: manually provided known peak (most frequent value observed in your analysis).
+                # bw: binwidth used at that iteration from the --> bw_list. % bw_list = np.linspace(min_bw, max_bw, 20) 
+
+            if tolerance is not None:
+                # if we manually want to manage the iteration with the help of tolerance values.the use this by assigning some value to tolerance..
+                print(f" picking the tolerance ----> ")
+                if target_peak is not None and (np.abs(target_peak - peak_val) < tolerance):
+                    continue
+            else:
+                print(f" Target_Peak is : {target_peak} gradually reaching to traget with bw step:{bw} and corresponding paek_val:{peak_val} ---> ")
+                if target_peak is not None and not (target_peak - bw <= peak_val <= target_peak + bw):
+                    continue
+
+            if counts[peak_idx] > best_match['peak_count']:
+                best_match.update({
+                    'binwidth': bw,
+                    'peak_count': counts[peak_idx],
+                    'peak_value': peak_val,
+                    'peak_bin_edges': (edges[peak_idx], edges[peak_idx+1]),
+                    'hist': counts,
+                    'edges': edges
+                })
+
+            if plot:
+                plt.figure(figsize=(6, 3))
+                plt.bar(bin_centers, counts, width=bw, alpha=0.6, edgecolor='black')
+                plt.axvline(peak_val, color='red', linestyle='--', label=f"Peak: {peak_val:.6f}")
+                plt.title(f"Binwidth = {bw:.1e} | Peak = {peak_val:.6f}")
+                plt.xlabel("Value")
+                plt.ylabel("Count")
+                plt.grid(True, linestyle='--', alpha=0.5)
+                plt.legend()
+                plt.tight_layout()
+                if save_dir:
+                    os.makedirs(save_dir, exist_ok=True)
+                    plt.savefig(f"{save_dir}/hist_bw_{i:02d}_{bw:.1e}.png", dpi=300)
+                plt.close()
+
+        return best_match
+
+    def fit_gaussian_to_peak(self, peak_range, save_dir=None):
+
+        """ 
+        peak_range = binwidth range.i.e. --> 
+        explorer = BinWidthExplorer(data, metadata=None)
+        results = explorer.evaluate_binwidth_range(decimal_place, plot=False, save_dir=None, target_peak=None, tolerance=None)
+        peak_range = results['peak_bin_edges']
+        mu, std, peak_data = explorer.fit_gaussian_to_peak(results['peak_bin_edges'],save_dir = None)
+        kde_vals, kde_x = explorer.plot_kde_comparison()
+        
+        gmm, labels, sil_score, db_score = explorer.fit_gmm_and_save(n_components=2)
+
+        """
+        mask = (self.data >= peak_range[0]) & (self.data <= peak_range[1])
+        peak_data = self.data[mask]
+        mu, std = norm.fit(peak_data)
+
+        x = np.linspace(peak_range[0], peak_range[1], 1000)
+        p = norm.pdf(x, mu, std)
+
+        plt.figure(figsize=(6, 3))
+        plt.hist(peak_data, bins=50, density=True, alpha=0.6, color='skyblue', edgecolor='black')
+        plt.plot(x, p, 'r--', label=f'Gaussian Fit\nμ={mu:.5f}, σ={std:.2e}')
+        plt.legend()
+        plt.title("Gaussian Fit to Peak")
+        plt.xlabel("Value")
+        plt.ylabel("Density")
+        plt.grid(True, linestyle='--', alpha=0.5)
+        if save_dir:
+            plt.savefig(os.path.join(save_dir, "gaussian_fit_peak.png"), dpi=300)
+            np.save(os.path.join(save_dir, "gaussian_peak_data.npy"), peak_data)
+        plt.close()
+
+        return {'mu': mu, 'std': std, 'data': peak_data}
+
+    def plot_kde_comparison(self, save_dir=None):
+        kde = gaussian_kde(self.data)
+        x = np.linspace(self.data.min(), self.data.max(), 1000)
+        y = kde.evaluate(x)
+
+        plt.figure(figsize=(6, 3))
+        plt.plot(x, y, label='KDE', color='green')
+        plt.hist(self.data, bins=100, density=True, alpha=0.4, color='gray', label='Histogram')
+        plt.legend()
+        plt.title("KDE vs Histogram")
+        plt.xlabel("Value")
+        plt.ylabel("Density")
+        plt.grid(True, linestyle='--', alpha=0.5)
+        if save_dir:
+            plt.savefig(os.path.join(save_dir, "kde_comparison.png"), dpi=300)
+        plt.close()
+
+    def fit_gmm_and_save(self, n_components=2, save_dir=None):
+        data_reshaped = self.data.reshape(-1, 1)
+        gmm = GaussianMixture(n_components=n_components, random_state=0).fit(data_reshaped)
+        labels = gmm.predict(data_reshaped)
+
+        for i in range(n_components):
+            cluster_data = self.data[labels == i]
+            np.save(os.path.join(save_dir, f"gmm_cluster_{i}_data.npy"), cluster_data)
+
+        return gmm, labels
+
+    #usage: 
+    # data = np.load("your_data.npy")
+    # explorer = BinWidthExplorer(data, save_dir="results")
+    # result = explorer.explore_binwidth_and_detect_peak(decimal_place=3)
+    # mu, std, peak_data = explorer.fit_gaussian_to_peak(result["peak_edges"])
+    # kde_vals, kde_x = explorer.plot_kde_comparison()
+    # gmm, labels, sil_score, db_score = explorer.fit_gmm_and_save(n_components=2)
+    # best_method, scores = explorer.compare_methods(peak_data, kde_vals, kde_x, gmm, labels, auto_select=True)
+
 
     @staticmethod
     def find_peak_bin(data, threshold_ratio=None):
@@ -191,8 +342,7 @@ class DataPreprocessor:
 ###############################################################################################
     @staticmethod
     def plot_histograms_from_directory(path, bins=800):
-        import  matplotlib.pyplot as plt
-        from pathlib import Path
+    
         """
             Processes all .mat and .npy files in the specified directory.
             For each file, this method:
@@ -267,8 +417,7 @@ class DataPreprocessor:
 ###############################################################################################
     @staticmethod
     def quantile_based_auto_threshold_plot(data, n_peaks=4, colors=None, show_subplots=False, save_dir=None):
-        import matplotlib.pyplot as plt
-
+        
         """
         Generates histograms based on quantile thresholds.
 
@@ -286,8 +435,6 @@ class DataPreprocessor:
             default_colors = ['red', 'blue', 'green', 'purple', 'orange', 'cyan', 'brown', 'magenta', 'olive']
             return default_colors[:n] if n <= len(default_colors) else [default_colors[i % len(default_colors)] for i in range(n)]
 
-        import os
-        from pathlib import Path
         if save_dir:
             save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=True)
@@ -362,11 +509,50 @@ class DataPreprocessor:
     #     show_subplots=True,
     #     save_dir="results/quantile_plots"
     # )
-
-
-
-
+    @staticmethod
+    def WinwidthExplorer_PicbwFindPeak(data, d = 3, plothist = False, TargetPeak = None):
         
-   
+        """ 
+        TargetPeak: this value is extracted by the significant analysis.
+        From my significant decimal digit analysis, i already found the most occured values with particular decimal digits(d: i.e. 3)
+        I will use this (d) information to group all such value in a group (i.e. bin) by using the b.w. range 10^-(d+1) =< b.w.<10^-d .
+        then I will find peak in that bin. 
+        then --> which bw value is giving me the best peak -> that means close to the known my mode/median values from data. 
+        here just to test the histogram with the winwidth variation 
+        """
+        if data.ndim >= 2:
+            data = data.flatten()
+        # else:
+        #   # data.ndim == 1:
+        #     data = data
+        # binwidth = (max(data) - min(data)) / nbins
+
+        binwidth = np.linspace(10**-(d+1):10**(-d):10**-(d+2))
+        nbins = (np.max(data) - np.min(data)) / binwidth
+        nbins = np.ceil(np.abs(nbins))
+
+        if TargetPeak is not None:
+            def Best_bw_explorer():
+                counts,bin_edges = np.histogram(data, nbis = nbins)
+            # counts: array of how many data points fall in each bin
+            # bin_edges: the boundaries of the bins
+
+                PeakArgument = np.argwhere(max(counts))
+                peakValue = edges[PeakArgument] + edges[PeakArgument +1]/2
+
+
+
+        plt.figure(figsize=(6,4))
+        plt.hist(data, bins = nbins)
+        # plt.show()        
+        plt.title(f'hist for nbins:{nbins},{binwidth}')
+        plt.xlabel('Value')
+        plt.ylabel('Frequency')
+        plt.ylim([0,10000])
+        plt.tight_layout()
+
+        return nbins
+        
+    
 
 

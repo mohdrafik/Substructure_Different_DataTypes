@@ -82,6 +82,169 @@ if __name__ == "__main__":
         max_points=50000
     )
 
+"""
+Example usage of this below code in help string quotes:
+--------------------------
+data = np.load("your_data.npy")
+explorer = BinWidthExplorer(data, save_dir="results")
+result = explorer.explore_binwidth_and_detect_peak(decimal_place=3)
+mu, std, peak_data = explorer.fit_gaussian_to_peak(result["peak_edges"])
+kde_vals, kde_x = explorer.plot_kde_comparison()
+gmm, labels, sil_score, db_score = explorer.fit_gmm_and_save(n_components=2)
+best_method, scores = explorer.compare_methods(peak_data, kde_vals, kde_x, gmm, labels, auto_select=True)
+--------------------------
+
+import numpy as np
+import os
+import matplotlib.pyplot as plt
+from scipy.stats import norm, gaussian_kde
+from sklearn.mixture import GaussianMixture
+from sklearn.metrics import silhouette_score, davies_bouldin_score
+
+class BinWidthExplorer:
+    def __init__(self, data, save_dir=None):
+        self.data = data.flatten() if data.ndim == 3 else data
+        self.save_dir = save_dir or os.getcwd()
+        os.makedirs(self.save_dir, exist_ok=True)
+
+    def explore_binwidth_and_detect_peak(self, decimal_place=3, plot=True):
+        min_bw = 10 ** -(decimal_place + 1)
+        max_bw = 10 ** -(decimal_place)
+        step = (max_bw - min_bw) / 20
+        best_binwidth = None
+        best_peak = -np.inf
+        results = {}
+
+        for bw in np.arange(min_bw, max_bw, step):
+            bins = np.arange(self.data.min(), self.data.max() + bw, bw)
+            counts, edges = np.histogram(self.data, bins=bins)
+            peak_idx = np.argmax(counts)
+            peak_val = counts[peak_idx]
+
+            if peak_val > best_peak:
+                best_peak = peak_val
+                best_binwidth = bw
+                best_edges = (edges[peak_idx], edges[peak_idx + 1])
+
+            results[bw] = (counts, edges, peak_val)
+
+        if plot:
+            plt.figure(figsize=(10, 6))
+            for bw, (counts, edges, _) in results.items():
+                plt.plot(edges[:-1], counts, label=f"bw={bw:.5f}", alpha=0.4)
+            plt.title("Binwidth Exploration")
+            plt.xlabel("Value")
+            plt.ylabel("Frequency")
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(self.save_dir, "binwidth_exploration.png"))
+            plt.close()
+
+        return {
+            "best_binwidth": best_binwidth,
+            "peak_edges": best_edges,
+            "peak_value": best_peak
+        }
+
+    def fit_gaussian_to_peak(self, peak_edges, save_plot=True):
+        mask = (self.data >= peak_edges[0]) & (self.data <= peak_edges[1])
+        peak_data = self.data[mask]
+        mu, std = norm.fit(peak_data)
+
+        x = np.linspace(min(peak_data), max(peak_data), 1000)
+        pdf = norm.pdf(x, mu, std)
+
+        if save_plot:
+            plt.figure(figsize=(8, 4))
+            plt.hist(peak_data, bins=50, density=True, alpha=0.6, label="Histogram")
+            plt.plot(x, pdf, 'r--', label=f"Gaussian Fit\nμ={mu:.4f}, σ={std:.4e}")
+            plt.title("Gaussian Fit to Peak")
+            plt.xlabel("Value")
+            plt.ylabel("Density")
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(self.save_dir, "gaussian_fit_peak.png"))
+            plt.close()
+
+        np.save(os.path.join(self.save_dir, "peak_data.npy"), peak_data)
+        return mu, std, peak_data
+
+    def plot_kde_comparison(self):
+        kde = gaussian_kde(self.data)
+        x = np.linspace(min(self.data), max(self.data), 1000)
+        kde_values = kde(x)
+
+        plt.figure(figsize=(8, 4))
+        plt.hist(self.data, bins=100, density=True, alpha=0.5, label="Histogram")
+        plt.plot(x, kde_values, label="KDE", color="green")
+        plt.title("KDE vs Histogram")
+        plt.xlabel("Value")
+        plt.ylabel("Density")
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(self.save_dir, "kde_comparison.png"))
+        plt.close()
+
+        return kde_values, x
+
+    def fit_gmm_and_save(self, n_components=2):
+        data_reshaped = self.data.reshape(-1, 1)
+        gmm = GaussianMixture(n_components=n_components, random_state=0).fit(data_reshaped)
+        labels = gmm.predict(data_reshaped)
+
+        for i in range(n_components):
+            cluster_data = self.data[labels == i]
+            np.save(os.path.join(self.save_dir, f"gmm_cluster_{i}_data.npy"), cluster_data)
+
+        silhouette = silhouette_score(data_reshaped, labels)
+        db_index = davies_bouldin_score(data_reshaped, labels)
+
+        return gmm, labels, silhouette, db_index
+
+    def compare_methods(self, peak_data, kde_values, kde_x, gmm, labels, auto_select=True):
+        gmm_score = silhouette_score(self.data.reshape(-1, 1), labels)
+        kde_peak = kde_x[np.argmax(kde_values)]
+        kde_peak_count = max(kde_values)
+        hist_peak_count = len(peak_data)
+
+        scores = {
+            "GMM_Silhouette": gmm_score,
+            "KDE_PeakHeight": kde_peak_count,
+            "Histogram_Count": hist_peak_count
+        }
+
+        if auto_select:
+            selected = max(scores, key=scores.get)
+        else:
+            selected = None
+
+        with open(os.path.join(self.save_dir, "method_comparison.txt"), "w") as f:
+            for method, score in scores.items():
+                f.write(f"{method}: {score:.4f}\n")
+            if selected:
+                f.write(f"\nBest Method: {selected}\n")
+
+        return selected, scores
+
+# Example Usage:
+if __name__ == "__main__":
+    data = np.load("your_data.npy")
+    explorer = BinWidthExplorer(data, save_dir="results")
+
+    result = explorer.explore_binwidth_and_detect_peak(decimal_place=3)
+    mu, std, peak_data = explorer.fit_gaussian_to_peak(result["peak_edges"])
+    kde_vals, kde_x = explorer.plot_kde_comparison()
+    gmm, labels, sil_score, db_score = explorer.fit_gmm_and_save(n_components=2)
+
+    best_method, score_dict = explorer.compare_methods(peak_data, kde_vals, kde_x, gmm, labels, auto_select=True)
+
+    print(f"Best Method: {best_method}\nScores: {score_dict}")
+
+
+"""
+
+
+
 # import numpy as np
 
 # data = np.random.randint(0,10,(1,10))  # Normal-distributed random numbers

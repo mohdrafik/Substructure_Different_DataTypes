@@ -527,7 +527,7 @@ class BinWidthExplorer(DataPreprocessor):
         #     data = data
         # binwidth = (max(data) - min(data)) / nbins
 
-        binwidth = np.linspace(10**-(d+1):10**(-d):10**-(d+2))
+        binwidth = np.linspace(10**-(d+1),10**(-d),10**-(d+2))
         nbins = (np.max(data) - np.min(data)) / binwidth
         nbins = np.ceil(np.abs(nbins))
 

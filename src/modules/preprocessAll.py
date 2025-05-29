@@ -7,7 +7,7 @@ from skimage.filters import threshold_otsu
 import matplotlib.pyplot as plt
 from itertools import cycle
 from pathlib import Path
-
+from scipy.io import savemat
 
 from path_manager import addpath
 addpath()
@@ -81,7 +81,8 @@ class BinWidthExplorer(DataPreprocessor):
     def evaluate_binwidth_range(self, decimal_place, plot=False, save_dir=None, target_peak=None, tolerance=None):
         min_bw = 10 ** -(decimal_place + 1)
         max_bw = 10 ** -(decimal_place)
-        bw_list = np.linspace(min_bw, max_bw, 20)
+        bw_list = np.linspace(min_bw, max_bw, 50)
+        # bw_list = range(min_bw, max_bw, step=10**-(decimal_place+2))  # Adjust step size as needed
 
         best_match = {
             'binwidth': None,
@@ -91,8 +92,11 @@ class BinWidthExplorer(DataPreprocessor):
             'hist': None,
             'edges': None
         }
-
+        countIteration = 0 
         for i, bw in enumerate(bw_list):
+            countIteration += 1
+            print(f"count iteration: {countIteration} with bw: {bw:.1e}")
+            # Calculate the number of bins based on the current binwidth
             data_min, data_max = self.data.min(), self.data.max()
             num_bins = int((data_max - data_min) / bw) + 1
 
@@ -105,12 +109,13 @@ class BinWidthExplorer(DataPreprocessor):
                 # target_peak: manually provided known peak (most frequent value observed in your analysis).
                 # bw: binwidth used at that iteration from the --> bw_list. % bw_list = np.linspace(min_bw, max_bw, 20) 
 
-            if tolerance is not None:
+            if tolerance is not None and target_peak is not None:
                 # if we manually want to manage the iteration with the help of tolerance values.the use this by assigning some value to tolerance..
                 print(f" picking the tolerance ----> ")
-                if target_peak is not None and (np.abs(target_peak - peak_val) < tolerance):
+                if np.abs(target_peak - peak_val) < tolerance:
                     continue
-            else:
+            if target_peak is not None and tolerance is None:
+                # if we want to use the target_peak value only, then use this.
                 print(f" Target_Peak is : {target_peak} gradually reaching to traget with bw step:{bw} and corresponding paek_val:{peak_val} ---> ")
                 if target_peak is not None and not (target_peak - bw <= peak_val <= target_peak + bw):
                     continue
@@ -129,7 +134,7 @@ class BinWidthExplorer(DataPreprocessor):
                 plt.figure(figsize=(6, 3))
                 plt.bar(bin_centers, counts, width=bw, alpha=0.6, edgecolor='black')
                 plt.axvline(peak_val, color='red', linestyle='--', label=f"Peak: {peak_val:.6f}")
-                plt.title(f"Binwidth = {bw:.1e} | Peak = {peak_val:.6f}")
+                plt.title(f"Binwidth  = {bw:.1e} | Peak = {peak_val:.6f}")
                 plt.xlabel("Value")
                 plt.ylabel("Count")
                 plt.grid(True, linestyle='--', alpha=0.5)
@@ -138,6 +143,7 @@ class BinWidthExplorer(DataPreprocessor):
                 if save_dir:
                     os.makedirs(save_dir, exist_ok=True)
                     plt.savefig(f"{save_dir}/hist_bw_{i:02d}_{bw:.1e}.png", dpi=300)
+                # plt.show()
                 plt.close()
 
         return best_match
@@ -158,8 +164,9 @@ class BinWidthExplorer(DataPreprocessor):
         mask = (self.data >= peak_range[0]) & (self.data <= peak_range[1])
         peak_data = self.data[mask]
         mu, std = norm.fit(peak_data)
-
-        x = np.linspace(peak_range[0], peak_range[1], 1000)
+        number_of_values = len(peak_data)
+        print(f"Number of values in peak range {peak_range}: {number_of_values}")
+        x = np.linspace(peak_range[0], peak_range[1], number_of_values)  # 10000
         p = norm.pdf(x, mu, std)
 
         plt.figure(figsize=(6, 3))
@@ -173,18 +180,26 @@ class BinWidthExplorer(DataPreprocessor):
         if save_dir:
             plt.savefig(os.path.join(save_dir, "gaussian_fit_peak.png"), dpi=300)
             np.save(os.path.join(save_dir, "gaussian_peak_data.npy"), peak_data)
+        plt.show()
         plt.close()
 
         return {'mu': mu, 'std': std, 'data': peak_data}
 
-    def plot_kde_comparison(self, save_dir=None):
-        kde = gaussian_kde(self.data)
-        x = np.linspace(self.data.min(), self.data.max(), 1000)
+    def plot_kde_comparison(self, peak_range, save_dir=None):
+
+        mask = (self.data >= peak_range[0]) & (self.data <= peak_range[1])
+        peak_data = self.data[mask]
+        number_of_values = len(peak_data)
+        print(f"Number of values in peak range {peak_range}: {number_of_values}")
+        mu = np.mean(peak_data)
+        sigma = np.std(peak_data)
+        kde = gaussian_kde(peak_data)
+        x = np.linspace(self.data.min(), self.data.max(), number_of_values) # 1000 points for smoothness
         y = kde.evaluate(x)
 
         plt.figure(figsize=(6, 3))
-        plt.plot(x, y, label='KDE', color='green')
-        plt.hist(self.data, bins=100, density=True, alpha=0.4, color='gray', label='Histogram')
+        plt.plot(x, y, label=f'kde\nμ={mu:.5f}, σ={std:.2e} ', color='green')
+        plt.hist(self.data, bins=100, density=True, alpha=0.6, color='gray', label='Histogram')
         plt.legend()
         plt.title("KDE vs Histogram")
         plt.xlabel("Value")
@@ -192,18 +207,84 @@ class BinWidthExplorer(DataPreprocessor):
         plt.grid(True, linestyle='--', alpha=0.5)
         if save_dir:
             plt.savefig(os.path.join(save_dir, "kde_comparison.png"), dpi=300)
+        plt.show()
         plt.close()
 
-    def fit_gmm_and_save(self, n_components=2, save_dir=None):
+    # def fit_gmm_and_save(self, n_components=2, save_dir=None):
+    #     data_reshaped = self.data.reshape(-1, 1)
+    #     gmm = GaussianMixture(n_components=n_components, random_state=0).fit(data_reshaped)
+    #     labels = gmm.predict(data_reshaped)
+
+    #     for i in range(n_components):
+    #         cluster_data = self.data[labels == i]
+    #         np.save(os.path.join(save_dir, f"gmm_cluster_{i}_data.npy"), cluster_data)
+
+    #     return gmm, labels
+    def fit_gmm_and_save(self, n_components=2, save_dir=None, save_mat=False, plot=False):
+        os.makedirs(save_dir, exist_ok=True)
+
         data_reshaped = self.data.reshape(-1, 1)
         gmm = GaussianMixture(n_components=n_components, random_state=0).fit(data_reshaped)
         labels = gmm.predict(data_reshaped)
+        volume_shape = self.data.shape
+
+        all_coords = np.array(np.unravel_index(np.arange(data_reshaped.shape[0]), volume_shape)).T
+        cluster_matrix = []
 
         for i in range(n_components):
-            cluster_data = self.data[labels == i]
-            np.save(os.path.join(save_dir, f"gmm_cluster_{i}_data.npy"), cluster_data)
+            cluster_mask = labels == i
+            cluster_data = data_reshaped[cluster_mask].flatten()
+            cluster_coords = all_coords[cluster_mask]
 
+            np.save(os.path.join(save_dir, f"gmm_cluster_{i}_data.npy"), cluster_data)
+            np.save(os.path.join(save_dir, f"gmm_cluster_{i}_coords.npy"), cluster_coords)
+
+            labeled_coords = np.hstack((cluster_coords, np.full((cluster_coords.shape[0], 1), i)))
+            cluster_matrix.append(labeled_coords)
+
+        if save_mat:
+            all_labeled_data = np.vstack(cluster_matrix)
+            mat_save_path = os.path.join(save_dir, 'cluster_coords_labels.mat')
+            savemat(mat_save_path, {'cluster_coords_labels': all_labeled_data})
+            print(f"\u2705 Saved .mat file for all clusters: {mat_save_path}")
+
+        if plot:
+            x_vals = np.linspace(data_reshaped.min(), data_reshaped.max(), 1000).reshape(-1, 1)
+            y_vals = np.exp(gmm.score_samples(x_vals))
+
+            plt.figure(figsize=(8, 5))
+            plt.hist(data_reshaped, bins=300, density=True, alpha=0.3, color='gray', label='Data Histogram')
+
+            means = gmm.means_.flatten()
+            stds = np.sqrt(gmm.covariances_).flatten()
+            weights = gmm.weights_
+
+            for i in range(n_components):
+                component = weights[i] * (1 / (stds[i] * np.sqrt(2 * np.pi))) * np.exp(
+                    -0.5 * ((x_vals.flatten() - means[i]) / stds[i]) ** 2)
+                plt.plot(x_vals, component, label=f'Component {i}', alpha=0.7)
+
+            plt.plot(x_vals, y_vals, 'k--', label='Total GMM Fit')
+            plt.title('Gaussian Mixture Model Fit')
+            plt.xlabel('Data Value')
+            plt.ylabel('Density')
+            plt.legend()
+            plt.grid(True)
+
+            plot_path = os.path.join(save_dir, 'gmm_fit_plot.png')
+            plt.savefig(plot_path)
+            plt.show()
+            plt.close()
+            print(f"GMM plot saved to: {plot_path}")
+
+        print(f"GMM clusters saved in: {save_dir}")
+        self.results['gmm'] = {
+            'gmm_model': gmm,
+            'labels': labels,
+            'components': n_components
+        }
         return gmm, labels
+
 
     #usage: 
     # data = np.load("your_data.npy")

@@ -1,0 +1,58 @@
+{
+    "AML2_cell11.json": {
+        "max_decimal_digit": "3",
+        "max_count": 7604888,
+        "mean": 1.3339999999999894,
+        "std": 1.0658141036401503e-14,
+        "mode": 1.334
+    },
+    "AML3_cell16.json": {
+        "max_decimal_digit": "3",
+        "max_count": 7642024,
+        "mean": 1.3339999999999899,
+        "std": 1.021405182655144e-14,
+        "mode": 1.334
+    },
+    "Tomogramma_BuddingYeastCell.json": {
+        "max_decimal_digit": "3",
+        "max_count": 8002388,
+        "mean": 1.333999999999993,
+        "std": 7.105427357601002e-15,
+        "mode": 1.334
+    },
+    "Tomogramma_Cell1.json": {
+        "max_decimal_digit": "3",
+        "max_count": 7991381,
+        "mean": 1.3339999999999927,
+        "std": 7.327471962526033e-15,
+        "mode": 1.334
+    },
+    "Tomogramma_Cell2.json": {
+        "max_decimal_digit": "3",
+        "max_count": 8026327,
+        "mean": 1.3339999999999932,
+        "std": 6.8833827526759706e-15,
+        "mode": 1.334
+    },
+    "Tomogramma_Cell3.json": {
+        "max_decimal_digit": "3",
+        "max_count": 8001957,
+        "mean": 1.333999999999993,
+        "std": 7.105427357601002e-15,
+        "mode": 1.334
+    },
+    "tomo_Grafene_24h.json": {
+        "max_decimal_digit": "3",
+        "max_count": 20936879,
+        "mean": 1.3340000004775698,
+        "std": 2.1854658170139105e-06,
+        "mode": 1.334
+    },
+    "tomo_grafene_48h.json": {
+        "max_decimal_digit": "18",
+        "max_count": 5670279,
+        "mean": 0.00858388297105225,
+        "std": 0.016879311489506044,
+        "mode": -0.062485889286222465
+    }
+}

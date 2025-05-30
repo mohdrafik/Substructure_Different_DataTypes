@@ -78,10 +78,15 @@ class BinWidthExplorer(DataPreprocessor):
         super().__init__(data, metadata)
         self.data = self.data.flatten() if self.data.ndim == 3 else self.data
 
-    def evaluate_binwidth_range(self, decimal_place, plot=False, save_dir=None, target_peak=None, tolerance=None):
+    def evaluate_binwidth_range(self, decimal_place, bw_listLength = None,  plot=False, save_dir=None, target_peak=None, tolerance=None):
         min_bw = 10 ** -(decimal_place + 1)
         max_bw = 10 ** -(decimal_place)
-        bw_list = np.linspace(min_bw, max_bw, 50)
+        if bw_listLength is None:
+            bw_list = np.linspace(min_bw, max_bw, 10)
+        else:
+            bw_list = np.linspace(min_bw, max_bw, bw_listLength)
+            
+
         # bw_list = range(min_bw, max_bw, step=10**-(decimal_place+2))  # Adjust step size as needed
 
         best_match = {
@@ -148,7 +153,7 @@ class BinWidthExplorer(DataPreprocessor):
 
         return best_match
 
-    def fit_gaussian_to_peak(self, peak_range, save_dir=None):
+    def fit_gaussian_to_peak(self, peak_range, binwidth, key, save_dir=None):
 
         """ 
         peak_range = binwidth range.i.e. --> 
@@ -166,14 +171,16 @@ class BinWidthExplorer(DataPreprocessor):
         mu, std = norm.fit(peak_data)
         number_of_values = len(peak_data)
         print(f"Number of values in peak range {peak_range}: {number_of_values}")
+
         x = np.linspace(peak_range[0], peak_range[1], number_of_values)  # 10000
         p = norm.pdf(x, mu, std)
+        nbins = int((peak_range[1]- peak_range[0])/binwidth) + 1  
 
         plt.figure(figsize=(6, 3))
-        plt.hist(peak_data, bins=50, density=True, alpha=0.6, color='skyblue', edgecolor='black')
+        plt.hist(peak_data, bins=nbins, density=True, alpha=0.6, color='skyblue', edgecolor='black') # 
         plt.plot(x, p, 'r--', label=f'Gaussian Fit\nμ={mu:.5f}, σ={std:.2e}')
         plt.legend()
-        plt.title("Gaussian Fit to Peak")
+        plt.title(f"Gaussian Fit to Peak {key} ")
         plt.xlabel("Value")
         plt.ylabel("Density")
         plt.grid(True, linestyle='--', alpha=0.5)
@@ -185,23 +192,26 @@ class BinWidthExplorer(DataPreprocessor):
 
         return {'mu': mu, 'std': std, 'data': peak_data}
 
-    def plot_kde_comparison(self, peak_range, save_dir=None):
+    def plot_kde_comparison(self, peak_range, binwidth, key, save_dir=None):
 
         mask = (self.data >= peak_range[0]) & (self.data <= peak_range[1])
         peak_data = self.data[mask]
         number_of_values = len(peak_data)
         print(f"Number of values in peak range {peak_range}: {number_of_values}")
         mu = np.mean(peak_data)
-        sigma = np.std(peak_data)
+        std = np.std(peak_data)
         kde = gaussian_kde(peak_data)
         x = np.linspace(self.data.min(), self.data.max(), number_of_values) # 1000 points for smoothness
         y = kde.evaluate(x)
+        kde_vals = y
+        kde_x = x
+        nbins = int((peak_range[1]- peak_range[0])/binwidth) + 1  
 
         plt.figure(figsize=(6, 3))
         plt.plot(x, y, label=f'kde\nμ={mu:.5f}, σ={std:.2e} ', color='green')
-        plt.hist(self.data, bins=100, density=True, alpha=0.6, color='gray', label='Histogram')
+        plt.hist(self.data, bins=nbins, density=True, alpha=0.6, color='gray', label='Histogram')
         plt.legend()
-        plt.title("KDE vs Histogram")
+        plt.title(f"KDE vs Histogram {key}")
         plt.xlabel("Value")
         plt.ylabel("Density")
         plt.grid(True, linestyle='--', alpha=0.5)
@@ -210,6 +220,8 @@ class BinWidthExplorer(DataPreprocessor):
         plt.show()
         plt.close()
 
+        return kde_vals, kde_x 
+    
     # def fit_gmm_and_save(self, n_components=2, save_dir=None):
     #     data_reshaped = self.data.reshape(-1, 1)
     #     gmm = GaussianMixture(n_components=n_components, random_state=0).fit(data_reshaped)
@@ -220,10 +232,17 @@ class BinWidthExplorer(DataPreprocessor):
     #         np.save(os.path.join(save_dir, f"gmm_cluster_{i}_data.npy"), cluster_data)
 
     #     return gmm, labels
-    def fit_gmm_and_save(self, n_components=2, save_dir=None, save_mat=False, plot=False):
+    def fit_gmm_and_save(self, peak_range, key, n_components=2, ForAllData = None, save_dir=None, save_mat=False, plot=False):
         os.makedirs(save_dir, exist_ok=True)
+       
+        if ForAllData is not None:
+            data_reshaped = self.data.reshape(-1, 1)
+        else:
+            mask = (self.data >= peak_range[0]) & (self.data <= peak_range[1])
+            peak_data = self.data[mask]
+            data_reshaped = peak_data
+            number_of_values = len(peak_data)
 
-        data_reshaped = self.data.reshape(-1, 1)
         gmm = GaussianMixture(n_components=n_components, random_state=0).fit(data_reshaped)
         labels = gmm.predict(data_reshaped)
         volume_shape = self.data.shape
@@ -246,7 +265,7 @@ class BinWidthExplorer(DataPreprocessor):
             all_labeled_data = np.vstack(cluster_matrix)
             mat_save_path = os.path.join(save_dir, 'cluster_coords_labels.mat')
             savemat(mat_save_path, {'cluster_coords_labels': all_labeled_data})
-            print(f"\u2705 Saved .mat file for all clusters: {mat_save_path}")
+            print(f" Saved .mat file for all clusters: {mat_save_path}")
 
         if plot:
             x_vals = np.linspace(data_reshaped.min(), data_reshaped.max(), 1000).reshape(-1, 1)
@@ -258,14 +277,15 @@ class BinWidthExplorer(DataPreprocessor):
             means = gmm.means_.flatten()
             stds = np.sqrt(gmm.covariances_).flatten()
             weights = gmm.weights_
-
+            
+            plt.figure(figsize=(6, 3))
             for i in range(n_components):
                 component = weights[i] * (1 / (stds[i] * np.sqrt(2 * np.pi))) * np.exp(
                     -0.5 * ((x_vals.flatten() - means[i]) / stds[i]) ** 2)
                 plt.plot(x_vals, component, label=f'Component {i}', alpha=0.7)
 
             plt.plot(x_vals, y_vals, 'k--', label='Total GMM Fit')
-            plt.title('Gaussian Mixture Model Fit')
+            plt.title(f'Gaussian Mixture Model Fit {key}')
             plt.xlabel('Data Value')
             plt.ylabel('Density')
             plt.legend()
@@ -273,9 +293,9 @@ class BinWidthExplorer(DataPreprocessor):
 
             plot_path = os.path.join(save_dir, 'gmm_fit_plot.png')
             plt.savefig(plot_path)
+            print(f"GMM plot saved to: {plot_path}")
             plt.show()
             plt.close()
-            print(f"GMM plot saved to: {plot_path}")
 
         print(f"GMM clusters saved in: {save_dir}")
         self.results['gmm'] = {
@@ -283,6 +303,7 @@ class BinWidthExplorer(DataPreprocessor):
             'labels': labels,
             'components': n_components
         }
+
         return gmm, labels
 
 

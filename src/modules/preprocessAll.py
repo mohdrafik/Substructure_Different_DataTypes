@@ -80,7 +80,7 @@ class DataPreprocessor:
 def logfunction(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <-------------------------------------------------- \n")
+        print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
         results = func(self, *args, **kwargs)
         print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
         return results
@@ -154,6 +154,8 @@ class BinWidthExplorer(DataPreprocessor):
 
             if plot:
                 plt.figure(figsize=(6, 3))
+                plt.hist(self.data, bins=num_bins, alpha=0.6,
+                        color='skyblue', edgecolor='black', density=True)
                 plt.bar(bin_centers, counts, width=bw,
                         alpha=0.6, edgecolor='black')
                 plt.axvline(peak_val, color='red', linestyle='--',
@@ -214,6 +216,7 @@ class BinWidthExplorer(DataPreprocessor):
 
         return {'mu': mu, 'std': std, 'data': peak_data}
 
+    @logfunction
     def plot_kde_comparison(self, peak_range, binwidth, key, save_dir=None):
 
         mask = (self.data >= peak_range[0]) & (self.data <= peak_range[1])
@@ -258,6 +261,7 @@ class BinWidthExplorer(DataPreprocessor):
     #         np.save(os.path.join(save_dir, f"gmm_cluster_{i}_data.npy"), cluster_data)
 
     #     return gmm, labels
+    @logfunction
     def fit_gmm_and_save(self, peak_range, key, n_components=2, ForAllData=None, save_dir=None, save_mat=False, plot=False):
         os.makedirs(save_dir, exist_ok=True)
 

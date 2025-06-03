@@ -235,3 +235,4 @@ ignoredFiles/
 *.asv
 src/moduleMatlab/test.m
 MachineLearning_Implementation/*
+src/modules/test_check.py

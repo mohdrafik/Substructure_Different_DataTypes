@@ -16,14 +16,26 @@ from path_manager import addpath
 addpath()
 
 
+@staticmethod
+def logfunction(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
+        results = func(self, *args, **kwargs)
+        print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
+        return results
+    return wrapper
+
+
+
 class DataPreprocessor:
+
     """
     A class for preprocessing data, including methods for analyzing and extracting features.
-
     A class for preprocessing data with support for methods like Otsu segmentation,
     peak detection using Freedman-Diaconis rule, quantile filtering, etc.
     Easily extendable for future preprocessing techniques.
-
+    
     """
 
     def __init__(self, data, metadata=None):
@@ -33,6 +45,43 @@ class DataPreprocessor:
         self.results = {}
         self.metadata = metadata or {}
 
+
+
+    @staticmethod
+    @logfunction
+    def DataMasker(data, maskValue = None, masked_WithZero=False, masked_ANDRemoved=False):
+        """
+        A class method to create a mask for the data based on specified conditions.
+        
+        Parameters:
+        -----------
+        data : np.ndarray
+            The input data array.
+        masked_WithZero : bool, optional
+            If True, masks the data with zeros where conditions are met.
+        masked_ANDRemoved : bool, optional
+            If True, removes the masked values from the data.
+        
+        Returns:
+        --------
+        np.ndarray
+            The masked or modified data array.
+        """
+
+        if maskValue is not None:   # traget value to mask 1.334 
+            mask = data == maskValue  # mask will be the boolean array of TRue and False. 
+            coords = np.argwhere(mask)  # coordinates of the masked values
+            # print(f"Masking values equal to {maskValue} at coordinates: {coords}")
+            if masked_WithZero:
+                data[mask] = 0  # set the masked values to zero
+            elif masked_ANDRemoved:
+                data = data[~mask]
+            else:
+                raise ValueError("Please specify either masked_WithZero or masked_ANDRemoved as True.") 
+
+        return data,coords
+    
+    
     def apply_otsu_segmentation(self, save_masks_to=None):
         """
         Apply Otsu's thresholding method to segment foreground from background.
@@ -75,16 +124,16 @@ class DataPreprocessor:
 
 # ---------------------------------DECORATOR DEFINED under the @staticmethos -------------------------
 
+# @staticmethod
+# def logfunction(func):
+#     @wraps(func)
+#     def wrapper(self, *args, **kwargs):
+#         print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
+#         results = func(self, *args, **kwargs)
+#         print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
+#         return results
+#     return wrapper
 
-@staticmethod
-def logfunction(func):
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
-        results = func(self, *args, **kwargs)
-        print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
-        return results
-    return wrapper
 
 
 ########## --Binwidth explorer and finding the peaks automatically from the data, this can be generalize ##########
@@ -659,6 +708,9 @@ class BinWidthExplorer(DataPreprocessor):
     #     save_dir="results/quantile_plots"
     # )
 
+    
+
+
     @staticmethod
     def WinwidthExplorer_PicbwFindPeak(data, d=3, plothist=False, TargetPeak=None):
         """ 
@@ -687,7 +739,7 @@ class BinWidthExplorer(DataPreprocessor):
             # bin_edges: the boundaries of the bins
 
                 PeakArgument = np.argwhere(max(counts))
-                peakValue = edges[PeakArgument] + edges[PeakArgument + 1]/2
+                peakValue = bin_edges[PeakArgument] + bin_edges[PeakArgument + 1]/2
 
         plt.figure(figsize=(6, 4))
         plt.hist(data, bins=nbins)

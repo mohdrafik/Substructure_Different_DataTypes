@@ -16,14 +16,15 @@ from path_manager import addpath
 addpath()
 
 
-@staticmethod
+# @staticmethod  # on top if we are defining do't need @staticmethod.
 def logfunction(func):
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(*args, **kwargs):
         print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
-        results = func(self, *args, **kwargs)
+        results = func(*args, **kwargs)
         print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
         return results
+    # print(f"\n ---------------------> /// Finished executing method:  \\\ <--------------------------------------------------\n")
     return wrapper
 
 
@@ -69,17 +70,19 @@ class DataPreprocessor:
         """
 
         if maskValue is not None:   # traget value to mask 1.334 
+            Masked_data = data.copy()
             mask = data == maskValue  # mask will be the boolean array of TRue and False. 
-            coords = np.argwhere(mask)  # coordinates of the masked values
+            coords_masked = np.argwhere(mask)  # coordinates of the masked values
+            coords_NonMasked = np.argwhere(~mask)  # coordinates of the NON masked values
             # print(f"Masking values equal to {maskValue} at coordinates: {coords}")
             if masked_WithZero:
-                data[mask] = 0  # set the masked values to zero
+                Masked_data[mask] = 0  # set the masked values to zero
             elif masked_ANDRemoved:
-                data = data[~mask]
+                Masked_data = Masked_data[~mask]
             else:
                 raise ValueError("Please specify either masked_WithZero or masked_ANDRemoved as True.") 
 
-        return data,coords
+        return Masked_data, coords_masked,coords_NonMasked
     
     
     def apply_otsu_segmentation(self, save_masks_to=None):

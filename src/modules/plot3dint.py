@@ -1,11 +1,8 @@
 import numpy as np
 import plotly.graph_objects as go
 
-
-import numpy as np
-import plotly.graph_objects as go
-
 def plot3dinteractive(voldata, keyvalue, sample_fraction):
+
     """Interactive 3D scatter plot for large 3D NumPy arrays.
     
     - `voldata`: Input 3D NumPy array.
@@ -87,18 +84,6 @@ if __name__ =="__main__":
         file_path = os.path.join(data_dir, filename)
         voldata = np.load(file_path)  # Load .npy file
         plot3dinteractive(voldata, filename, sample_fraction=0.02)  # Only 0.5% of points
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

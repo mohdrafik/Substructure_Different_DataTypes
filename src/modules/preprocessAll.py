@@ -22,7 +22,7 @@ def logfunction(func):
     def wrapper(*args, **kwargs):
         print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
         results = func(*args, **kwargs)
-        print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
+        # print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
         return results
     # print(f"\n ---------------------> /// Finished executing method:  \\\ <--------------------------------------------------\n")
     return wrapper
@@ -72,18 +72,25 @@ class DataPreprocessor:
         if maskValue is not None:   # traget value to mask 1.334 
             Masked_data = data.copy()
             mask = data == maskValue  # mask will be the boolean array of TRue and False. 
-            coords_masked = np.argwhere(mask)  # coordinates of the masked values
-            coords_NonMasked = np.argwhere(~mask)  # coordinates of the NON masked values
+            maskedValues_coordsOnly = np.argwhere(mask)  # coordinates of the masked values
+            UnMasked_coords = np.argwhere(~mask)  # coordinates of the NON masked values
             # print(f"Masking values equal to {maskValue} at coordinates: {coords}")
             if masked_WithZero:
                 Masked_data[mask] = 0  # set the masked values to zero
-                Non_Masked_Data = Masked_data[Masked_data > 0]
+                filtered_Data_WithoutZero = Masked_data[Masked_data > 0] 
             elif masked_ANDRemoved:
                 Masked_data = Masked_data[~mask]
+
             else:
                 raise ValueError("Please specify either masked_WithZero or masked_ANDRemoved as True.") 
 
-        return Masked_data, Non_Masked_Data, coords_NonMasked, coords_masked
+            # print(f"Masked data whether masked values is - {maskValue} and made them zeros or just removed.:{Masked_data} \n ")
+            # print(f"_Masked values coordinates only where masked value - {maskValue} :\n  {maskedValues_coordsOnly} \n ")
+            # print(f"filtered data after masking with zero(making them 0) for given mask value - {maskValue} and removing those zeros. :\n {filtered_Data_WithoutZero} \n ")
+            # print(f"coordinates of the unmasked values only:\n {UnMasked_coords} \n ") 
+            # print(f"mask will be the boolean array of TRUE and False \n {mask} \n ") 
+
+        return Masked_data, maskedValues_coordsOnly, filtered_Data_WithoutZero, UnMasked_coords, mask  
     
     
     def apply_otsu_segmentation(self, save_masks_to=None):

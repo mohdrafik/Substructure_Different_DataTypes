@@ -401,7 +401,6 @@ class DataPlotter:
     # def QunatileBasedThrseholdingVisualization():
 
 
-
 if __name__ == "__main__":
 
     from plot_dataModule import DataPlotter

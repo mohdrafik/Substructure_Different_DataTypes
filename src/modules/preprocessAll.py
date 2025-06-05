@@ -77,12 +77,13 @@ class DataPreprocessor:
             # print(f"Masking values equal to {maskValue} at coordinates: {coords}")
             if masked_WithZero:
                 Masked_data[mask] = 0  # set the masked values to zero
+                Non_Masked_Data = Masked_data[Masked_data > 0]
             elif masked_ANDRemoved:
                 Masked_data = Masked_data[~mask]
             else:
                 raise ValueError("Please specify either masked_WithZero or masked_ANDRemoved as True.") 
 
-        return Masked_data, coords_masked,coords_NonMasked
+        return Masked_data, Non_Masked_Data, coords_NonMasked, coords_masked
     
     
     def apply_otsu_segmentation(self, save_masks_to=None):

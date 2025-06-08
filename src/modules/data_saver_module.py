@@ -1,5 +1,7 @@
 import os
 import json
+import scipy.io as sio
+import numpy as np
 from pathlib import Path
 
 class DataSaver:
@@ -41,6 +43,58 @@ class DataSaver:
         with open(save_path, 'w') as f:
             json.dump(filtered_data, f, indent=4)
         print(f" Saved metadata to: {save_path}")
+
+
+
+    @staticmethod
+    def save_masked_Unmasked_into_npy_mat(save_dir, base_name,
+                            Masked_data, masked_coords,
+                            filtered_data, unmasked_coords, mask):
+        """
+        Save the masked data and coordinates into .npy and .mat files.
+
+        Parameters:
+        -----------
+        save_dir : str
+            Directory where files will be saved.
+        base_name : str
+            Base name used for naming files.
+        Masked_data : np.ndarray
+            The masked array after masking values.
+        masked_coords : np.ndarray
+            Coordinates of masked values.
+        filtered_data : np.ndarray
+            Filtered non-zero data after masking with zero.
+        unmasked_coords : np.ndarray
+            Coordinates of values not masked.
+        mask : np.ndarray
+            Boolean mask indicating masked positions.
+        """
+        os.makedirs(save_dir, exist_ok=True)
+
+        # Save individual components as .npy
+        np.save(os.path.join(save_dir, f"{base_name}_masked_data.npy"), Masked_data)
+        np.save(os.path.join(save_dir, f"{base_name}_masked_coords.npy"), masked_coords)
+        np.save(os.path.join(save_dir, f"{base_name}_filtered_data.npy"), filtered_data)
+        np.save(os.path.join(save_dir, f"{base_name}_unmasked_coords.npy"), unmasked_coords)
+        np.save(os.path.join(save_dir, f"{base_name}_mask_bool.npy"), mask)
+
+        # Save .mat file with x,y,z,1/0 (assuming 3D coordinates)
+        #  Create labels
+        unmasked_labels = np.ones((unmasked_coords.shape[0], 1))
+        masked_labels = np.zeros((masked_coords.shape[0], 1))
+
+        # Combine with labels
+        unmasked_labeled = np.hstack((unmasked_coords, unmasked_labels))
+        masked_labeled = np.hstack((masked_coords, masked_labels))
+
+        # Concatenate all rows: [x, y, z, label]
+        all_coords_labeled = np.vstack((unmasked_labeled, masked_labeled))
+
+        # Save as .mat
+        save_path = os.path.join(save_dir, f"{base_name}_coords_mask_label.mat")
+        sio.savemat(save_path, {'coords_mask_label': all_coords_labeled})
+
 
 
 

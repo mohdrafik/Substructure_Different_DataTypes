@@ -55,6 +55,57 @@ class DataPlotter:
         return self.save_dir / f"{filename_stem}{suffix}"
 
 #################################################################################################################
+    @staticmethod
+    def create_mesh_from_volume(volumeData, grid_factor=128, simplify=True, threshold ='percentile', percentileValue= None,  color_mode='gradient'):
+        volume = volumeData
+        flat = volume[volume > 0].flatten()
+        if threshold == 'percentile':
+            if percentileValue: 
+                threshold = np.percentile(flat, percentileValue)  
+            else:
+                threshold = np.percentile(flat, 50)  # or any fixed value like threshold = 1.0
+
+            print(f" Percentile Based Threshold: {threshold:.4f}")
+        elif threshold == 'otsu':
+            threshold = threshold_otsu(flat)
+            print(f" Otsu Threshold: {threshold:.4f}")
+        else:
+            threshold = 1.334
+            print(f" Manual Threshold: {threshold:.4f}")
+
+
+        print("[INFO] Extracting mesh...")
+        verts, faces, _, _ = marching_cubes(volume, level=threshold)
+        print(f"[INFO] Mesh before simplification: {len(verts)} vertices, {len(faces)} faces")
+
+        mesh = o3d.geometry.TriangleMesh()
+        mesh.vertices = o3d.utility.Vector3dVector(verts)
+        mesh.triangles = o3d.utility.Vector3iVector(faces)
+        mesh.compute_vertex_normals()
+
+        if simplify:
+            voxel_size = max(volume.shape) / grid_factor
+            mesh = mesh.simplify_vertex_clustering(voxel_size=voxel_size)
+            print(f"[INFO] Mesh after simplification: {len(mesh.vertices)} vertices, {len(mesh.triangles)} faces")
+
+        if color_mode == 'gradient':
+            z_vals = np.asarray(mesh.vertices)[:, 2]
+            z_min, z_max = z_vals.min(), z_vals.max()
+            norm_z = (z_vals - z_min) / (z_max - z_min + 1e-8)
+            colors = np.stack([norm_z, 0.6 * np.ones_like(norm_z), 1.0 - norm_z], axis=1)
+            mesh.vertex_colors = o3d.utility.Vector3dVector(colors)
+        else:
+            mesh.paint_uniform_color([0.6, 0.7, 1.0])
+
+        o3d.visualization.draw_geometries([mesh], mesh_show_back_face=True)
+
+        return mesh
+        
+    # @staticmethod
+    # def visualize_mesh(mesh):
+    #     o3d.visualization.draw_geometries([mesh], mesh_show_back_face=True)
+
+#################################################################################################################
     def plot_simple(self, file, save_name=None):
         data = np.load(file).flatten().reshape(-1, 1)
         x_data = np.linspace(data.min(), data.max(), len(data))
@@ -399,6 +450,7 @@ class DataPlotter:
 #################################################################################################################
     # @staticmethod
     # def QunatileBasedThrseholdingVisualization():
+
 
 
 if __name__ == "__main__":

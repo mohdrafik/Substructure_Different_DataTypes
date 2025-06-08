@@ -90,7 +90,8 @@ class DataPreprocessor:
             # print(f"coordinates of the unmasked values only:\n {UnMasked_coords} \n ") 
             # print(f"mask will be the boolean array of TRUE and False \n {mask} \n ") 
 
-        return Masked_data, maskedValues_coordsOnly, filtered_Data_WithoutZero, UnMasked_coords, mask  
+        return Masked_data, maskedValues_coordsOnly, filtered_Data_WithoutZero, UnMasked_coords, mask 
+
     
     
     def apply_otsu_segmentation(self, save_masks_to=None):

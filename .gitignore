@@ -236,3 +236,5 @@ ignoredFiles/
 src/moduleMatlab/test.m
 MachineLearning_Implementation/*
 src/modules/test_check.py
+resolve_notebook_conflicts.py
+resolve_notebook_conflicts.sh

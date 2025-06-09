@@ -1,6 +1,20 @@
 import numpy as np
 import plotly.graph_objects as go
 
+from functools import wraps
+# @staticmethod  # on top if we are defining do't need @staticmethod.
+def logfunction(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
+        results = func(*args, **kwargs)
+        # print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
+        return results
+    # print(f"\n ---------------------> /// Finished executing method:  \\\ <--------------------------------------------------\n")
+    return wrapper
+
+
+@logfunction
 def plot3dinteractive(voldata, keyvalue, sample_fraction):
 
     """Interactive 3D scatter plot for large 3D NumPy arrays.

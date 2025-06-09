@@ -74,7 +74,7 @@ class DataPreprocessor:
             mask = data == maskValue  # mask will be the boolean array of TRue and False. 
             maskedValues_coordsOnly = np.argwhere(mask)  # coordinates of the masked values
             UnMasked_coords = np.argwhere(~mask)  # coordinates of the NON masked values
-            maskedValuesExtractedbg = Masked_data[mask]  # masked values in the data
+            maskedValuesExtractedbg = Masked_data*mask  # return bakground array of size of data,with maskValues as it is and other are zeros.
             # print(f"Masking values equal to {maskValue} at coordinates: {coords}")
             if masked_WithZero:
                 Masked_data[mask] = 0  # set the masked values to zero

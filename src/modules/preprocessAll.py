@@ -74,6 +74,7 @@ class DataPreprocessor:
             mask = data == maskValue  # mask will be the boolean array of TRue and False. 
             maskedValues_coordsOnly = np.argwhere(mask)  # coordinates of the masked values
             UnMasked_coords = np.argwhere(~mask)  # coordinates of the NON masked values
+            maskedValuesExtractedbg = Masked_data[mask]  # masked values in the data
             # print(f"Masking values equal to {maskValue} at coordinates: {coords}")
             if masked_WithZero:
                 Masked_data[mask] = 0  # set the masked values to zero
@@ -84,15 +85,16 @@ class DataPreprocessor:
             else:
                 raise ValueError("Please specify either masked_WithZero or masked_ANDRemoved as True.") 
 
-            # print(f"Masked data whether masked values is - {maskValue} and made them zeros or just removed.:{Masked_data} \n ")
-            # print(f"_Masked values coordinates only where masked value - {maskValue} :\n  {maskedValues_coordsOnly} \n ")
-            # print(f"filtered data after masking with zero(making them 0) for given mask value - {maskValue} and removing those zeros. :\n {filtered_Data_WithoutZero} \n ")
-            # print(f"coordinates of the unmasked values only:\n {UnMasked_coords} \n ") 
-            # print(f"mask will be the boolean array of TRUE and False \n {mask} \n ") 
+            # print(f" Masked data (returns the array of data size) where masked values is - {maskValue} and made them all zeros and left other as it is, or just removed them if masked_ANDRemoved = True.:{Masked_data} \n ")
+            # print(f" Masked values coordinates only where masked value - {maskValue} :\n  {maskedValues_coordsOnly} \n ")
+            # print(f" filtered data (return a list of nonzero values from the data) after masking with zero(making them 0) for given mask value - {maskValue} and removing those zeros. :\n {filtered_Data_WithoutZero} \n ")
+            # print(f" coordinates of the unmasked values only:\n, it returns list of list (nx3 dimension), n is unmasked values.  {UnMasked_coords} \n ") 
+            # print(f" mask will be the boolean array of size of data exactly with TRUE and False \n {mask} \n ") 
+            # print(f"Masked values extracted background only, it is list of msked values, size of list is equal to the number  of maskValue in the data. :\n {maskedValuesExtractedbg} \n ")
 
-        return Masked_data, maskedValues_coordsOnly, filtered_Data_WithoutZero, UnMasked_coords, mask 
+        return Masked_data, maskedValues_coordsOnly, filtered_Data_WithoutZero, UnMasked_coords, mask , maskedValuesExtractedbg
 
-    
+
     
     def apply_otsu_segmentation(self, save_masks_to=None):
         """

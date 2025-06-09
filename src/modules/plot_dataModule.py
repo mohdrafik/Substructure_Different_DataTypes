@@ -13,8 +13,24 @@ from skimage.filters import threshold_otsu
 from skimage.measure import marching_cubes
 from scipy.ndimage import gaussian_filter
 
+import open3d as o3d
+import imageio
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
 # from path_manager import addpath
 # addpath()  # custom module to add paths this is not needed in this case because this module is in the same directory as the plot_dataModule.py script
+
+from functools import wraps
+
+def decoratorLog(func):
+    @wraps(func)
+    def wrapper(*args,**kwargs):
+        print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
+        results = func(*args, **kwargs)
+        # print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
+        return results
+    return wrapper
+
 
 from listspecificfiles import readlistFiles  # custom module to list files
 
@@ -56,7 +72,8 @@ class DataPlotter:
 
 #################################################################################################################
     @staticmethod
-    def create_mesh_from_volume(volumeData, grid_factor=128, simplify=True, threshold ='percentile', percentileValue= None,  color_mode='gradient'):
+    @decoratorLog
+    def create_mesh_visualize_from_volumeData(volumeData, grid_factor, simplify=True, threshold ='percentile', percentileValue= None,  color_mode='gradient'):
         volume = volumeData
         flat = volume[volume > 0].flatten()
         if threshold == 'percentile':
@@ -99,7 +116,48 @@ class DataPlotter:
 
         o3d.visualization.draw_geometries([mesh], mesh_show_back_face=True)
 
+
         return mesh
+    
+    @staticmethod
+    @decoratorLog
+    def save_mesh_views_as_gif_and_png(mesh, save_dir, savefilenamepng , savefilenamegif):
+        """
+        Save the mesh visualization in isometric form as PNG and animated GIF.
+        """
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        vis = o3d.visualization.Visualizer()
+        vis.create_window(visible=False)
+        vis.add_geometry(mesh)
+        ctr = vis.get_view_control()
+        ctr.set_zoom(0.8)
+        vis.poll_events()
+        vis.update_renderer()
+
+        # Isometric angles to simulate rotation
+        angles = list(range(0, 360, 10))
+        images = []
+
+        for angle in angles:
+            ctr.rotate(10.0, 0.0)  # Horizontal rotation
+            vis.poll_events()
+            vis.update_renderer()
+            image = vis.capture_screen_float_buffer(do_render=True)
+            image_np = (np.asarray(image) * 255).astype(np.uint8)
+            images.append(image_np)
+
+            if angle == 0:
+                imageio.imwrite(os.path.join(save_dir, savefilenamepng), image_np)
+
+        gif_path = os.path.join(save_dir, savefilenamegif)
+        print(f"Saving GIF and png to {gif_path}")
+        imageio.mimsave(gif_path, images, fps=10)
+        vis.destroy_window()
+
+        return gif_path
+
         
     # @staticmethod
     # def visualize_mesh(mesh):
@@ -343,14 +401,14 @@ class DataPlotter:
 
         print(f"All plots completed in {time.time() - t_start:.2f} seconds.")
 
-#################################################################################################################
+################################################################################################################# does not working  on cnr computer.
     @staticmethod
     def visualize_and_export_3d_mesh(fg_mask, data, smoothing=None, title=None,
                                      save_obj_path=None,
                                      save_png_path=None,
                                      save_gif_path=None,
                                      rotate_and_capture=False,
-                                     gif_frames=36):
+                                     gif_frames=12):
         """
         Visualize a 3D mesh from a 3D numpy array using Open3D. 
         Optionally save the mesh as an OBJ file and capture images or GIFs.
@@ -437,15 +495,15 @@ class DataPlotter:
             print(f" OBJ saved: {save_obj_path}")
 
         # these two lines require manuual closing of the window
-        # vis.run()  #  This keeps the window open until you close it manually
-        # vis.destroy_window()
+        vis.run()  #  This keeps the window open until you close it manually
+        vis.destroy_window()
 
         # Instead, we can use a loop to keep the window open for a short time
         # and then close it automatically
-        vis.poll_events()
-        vis.update_renderer()
-        time.sleep(3)  # Keep the window open for 2 seconds
-        vis.destroy_window()
+        # vis.poll_events()
+        # vis.update_renderer()
+        # time.sleep(10)  # Keep the window open for 2 seconds
+        # vis.destroy_window()
 
 #################################################################################################################
     # @staticmethod

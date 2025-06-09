@@ -4,6 +4,20 @@ import scipy.io as sio
 import numpy as np
 from pathlib import Path
 
+
+# Decorator to log method execution
+# This decorator can be used to log the execution of methods in the DataSaver class.
+from functools import wraps
+
+def decoratorLog(func):
+    @wraps(func)
+    def wrapper(*args,**kwargs):
+        print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
+        results = func(*args, **kwargs)
+        print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
+        return results
+    return wrapper
+
 class DataSaver:
     """
     A flexible class to save metadata or results to JSON format with optional filtering of fields.
@@ -23,6 +37,7 @@ class DataSaver:
         self.include_fields = include_fields if include_fields else []
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
+    @decoratorLog
     def save(self, data_list):
         filtered_data = []
         for entry in data_list:
@@ -47,6 +62,7 @@ class DataSaver:
 
 
     @staticmethod
+    @decoratorLog
     def save_masked_Unmasked_into_npy_mat(save_dir, base_name,
                             Masked_data, masked_coords,
                             filtered_data, unmasked_coords, mask):
@@ -94,8 +110,6 @@ class DataSaver:
         # Save as .mat
         save_path = os.path.join(save_dir, f"{base_name}_coords_mask_label.mat")
         sio.savemat(save_path, {'coords_mask_label': all_coords_labeled})
-
-
 
 
 # Example usage

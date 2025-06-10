@@ -85,12 +85,12 @@ class DataPreprocessor:
             else:
                 raise ValueError("Please specify either masked_WithZero or masked_ANDRemoved as True.") 
 
-            # print(f" Masked data (returns the array of data size) where masked values is - {maskValue} and made them all zeros and left other as it is, or just removed them if masked_ANDRemoved = True.:{Masked_data} \n ")
-            # print(f" Masked values coordinates only where masked value - {maskValue} :\n  {maskedValues_coordsOnly} \n ")
-            # print(f" filtered data (return a list of nonzero values from the data) after masking with zero(making them 0) for given mask value - {maskValue} and removing those zeros. :\n {filtered_Data_WithoutZero} \n ")
-            # print(f" coordinates of the unmasked values only:\n, it returns list of list (nx3 dimension), n is unmasked values.  {UnMasked_coords} \n ") 
-            # print(f" mask will be the boolean array of size of data exactly with TRUE and False \n {mask} \n ") 
-            # print(f"Masked values extracted background only, it is list of msked values, size of list is equal to the number  of maskValue in the data. :\n {maskedValuesExtractedbg} \n ")
+            print(f" Masked data (returns the array of data size) where masked values is - {maskValue} and made them all zeros and left other as it is, or just removed them if masked_ANDRemoved = True: Masked_data : \n {Masked_data[:2,:2,:2]} \n and Shape: \n {Masked_data.shape} \n ")
+            print(f" Masked values coordinates only where masked value - {maskValue} : maskedValues_coordsOnly: \n {maskedValues_coordsOnly[:2,:2]} and its shape:\n {maskedValues_coordsOnly.shape} ")
+            print(f" filtered data (return a list of nonzero values from the data) after masking with zero(making them 0) for given mask value - {maskValue} and removing those zeros. :\n {filtered_Data_WithoutZero[:2]} \n ")
+            print(f" coordinates of the unmasked values only:\n, it returns list of list (nx3 dimension), n is unmasked values. unMasked_coords:\n {UnMasked_coords[:2,:2]} and its shape: \n {UnMasked_coords.shape} \n ") 
+            print(f" mask will be the boolean array of size of data exactly with TRUE and False , mask: \n {mask[:2,:2,:2]} and its shape: \n {mask.shape} \n ") 
+            print(f"Masked values extracted background only, it is list of msked values, size of list is equal to the number  of maskValue in the data. :\n {maskedValuesExtractedbg} \n and its shape: \n {maskedValuesExtractedbg.shape} \n ")
 
         return Masked_data, maskedValues_coordsOnly, filtered_Data_WithoutZero, UnMasked_coords, mask , maskedValuesExtractedbg
 

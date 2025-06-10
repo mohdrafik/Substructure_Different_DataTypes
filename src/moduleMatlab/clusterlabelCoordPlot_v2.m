@@ -26,7 +26,9 @@ function clusterlabelCoordPlot_v2(data_dir, mode, alpha_value, min_cluster_size,
 % data_dir            : Directory containing .mat files [x y z label]
 % mode                : 'mesh', 'point', or 'mesh+point'
 % alpha_value         : Alpha shape parameter (higher → smoother)
-% min_cluster_size    : Minimum number of points to consider a cluster
+% min_cluster_size    : Minimum number of points to consider a cluster 10
+% or less like 3,4,..
+
 % face_transparency   : Surface transparency (0=transparent, 1=solid)
 % use_subplots        : true = all clusters in one figure | false = separate figs
 % =========================================================================
@@ -40,7 +42,7 @@ if nargin < 1 || isempty(data_dir)
     error('Please provide a directory containing .mat files.');
 end
 
-custom_output_dir = fullfile(data_dir, 'visualization_results');
+custom_output_dir = fullfile(data_dir, 'visualization_results_mesh');
 if ~exist(custom_output_dir, 'dir')
     mkdir(custom_output_dir);
 end

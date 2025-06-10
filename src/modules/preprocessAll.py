@@ -20,13 +20,13 @@ addpath()
 def logfunction(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        print(f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
+        print(
+            f"\n ---------------------> /// Implementing method: {func.__name__} \\\ <------------------------------------------------------- \n")
         results = func(*args, **kwargs)
         # print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
         return results
     # print(f"\n ---------------------> /// Finished executing method:  \\\ <--------------------------------------------------\n")
     return wrapper
-
 
 
 class DataPreprocessor:
@@ -36,7 +36,7 @@ class DataPreprocessor:
     A class for preprocessing data with support for methods like Otsu segmentation,
     peak detection using Freedman-Diaconis rule, quantile filtering, etc.
     Easily extendable for future preprocessing techniques.
-    
+
     """
 
     def __init__(self, data, metadata=None):
@@ -46,14 +46,12 @@ class DataPreprocessor:
         self.results = {}
         self.metadata = metadata or {}
 
-
-
     @staticmethod
     @logfunction
-    def DataMasker(data, maskValue = None, masked_WithZero=False, masked_ANDRemoved=False):
+    def DataMasker(data, maskValue=None, masked_WithZero=False, masked_ANDRemoved=False):
         """
         A class method to create a mask for the data based on specified conditions.
-        
+
         Parameters:
         -----------
         data : np.ndarray
@@ -62,40 +60,49 @@ class DataPreprocessor:
             If True, masks the data with zeros where conditions are met.
         masked_ANDRemoved : bool, optional
             If True, removes the masked values from the data.
-        
+
         Returns:
         --------
         np.ndarray
             The masked or modified data array.
         """
 
-        if maskValue is not None:   # traget value to mask 1.334 
+        if maskValue is not None:   # traget value to mask 1.334
             Masked_data = data.copy()
-            mask = data == maskValue  # mask will be the boolean array of TRue and False. 
-            maskedValues_coordsOnly = np.argwhere(mask)  # coordinates of the masked values
-            UnMasked_coords = np.argwhere(~mask)  # coordinates of the NON masked values
-            maskedValuesExtractedbg = Masked_data*mask  # return bakground array of size of data,with maskValues as it is and other are zeros.
+            # mask will be the boolean array of TRue and False.
+            mask = data == maskValue
+            maskedValues_coordsOnly = np.argwhere(
+                mask)  # coordinates of the masked values
+            # coordinates of the NON masked values
+            UnMasked_coords = np.argwhere(~mask)
+            # return bakground array of size of data,with maskValues as it is and other are zeros.
+            maskedValuesExtractedbg = Masked_data*mask
             # print(f"Masking values equal to {maskValue} at coordinates: {coords}")
             if masked_WithZero:
                 Masked_data[mask] = 0  # set the masked values to zero
-                filtered_Data_WithoutZero = Masked_data[Masked_data > 0] 
+                filtered_Data_WithoutZero = Masked_data[Masked_data > 0]
             elif masked_ANDRemoved:
                 Masked_data = Masked_data[~mask]
 
             else:
-                raise ValueError("Please specify either masked_WithZero or masked_ANDRemoved as True.") 
+                raise ValueError(
+                    "Please specify either masked_WithZero or masked_ANDRemoved as True.")
 
-            print(f" Masked data (returns the array of data size) where masked values is - {maskValue} and made them all zeros and left other as it is, or just removed them if masked_ANDRemoved = True: Masked_data : \n {Masked_data[:2,:2,:2]} \n and Shape: \n {Masked_data.shape} \n ")
-            print(f" Masked values coordinates only where masked value - {maskValue} : maskedValues_coordsOnly: \n {maskedValues_coordsOnly[:2,:2]} and its shape:\n {maskedValues_coordsOnly.shape} ")
-            print(f" filtered data (return a list of nonzero values from the data) after masking with zero(making them 0) for given mask value - {maskValue} and removing those zeros. :\n {filtered_Data_WithoutZero[:2]} \n ")
-            print(f" coordinates of the unmasked values only:\n, it returns list of list (nx3 dimension), n is unmasked values. unMasked_coords:\n {UnMasked_coords[:2,:2]} and its shape: \n {UnMasked_coords.shape} \n ") 
-            print(f" mask will be the boolean array of size of data exactly with TRUE and False , mask: \n {mask[:2,:2,:2]} and its shape: \n {mask.shape} \n ") 
-            print(f"Masked values extracted background only, it is list of msked values, size of list is equal to the number  of maskValue in the data. :\n {maskedValuesExtractedbg} \n and its shape: \n {maskedValuesExtractedbg.shape} \n ")
+            print(
+                f" Masked data (returns the array of data size) where masked values-{maskValue} are set to zero, and left other as it is, or just removed them if masked_ANDRemoved = True: Masked_data : \n {Masked_data[:2,:2,:2]} \n and Shape: \n {Masked_data.shape} \n ")
+            print(
+                f" Masked values coordinates only where masked value - {maskValue} : maskedValues_coordsOnly: \n {maskedValues_coordsOnly[:2,:2]} and its shape:\n {maskedValues_coordsOnly.shape} ")
+            print(
+                f" filtered data (return a list of nonzero values from the data) after masking with zero(making them 0) for given mask value - {maskValue} and removing those zeros. :\n {filtered_Data_WithoutZero[:2]} \n ")
+            print(
+                f" coordinates of the unmasked values only:\n, it returns list of list (nx3 dimension), n is unmasked values. unMasked_coords:\n {UnMasked_coords[:2,:2]} and its shape: \n {UnMasked_coords.shape} \n ")
+            print(
+                f" mask will be the boolean array of size of data exactly with TRUE and False , mask: \n {mask[:2,:2,:2]} and its shape: \n {mask.shape} \n ")
+            print(
+                f"Masked values extracted background only, return bakground array of size of data,with maskValues as it is and other are zeros. :\n {maskedValuesExtractedbg[:2,:2,:2]} \n and its shape: \n {maskedValuesExtractedbg.shape} \n ")
 
-        return Masked_data, maskedValues_coordsOnly, filtered_Data_WithoutZero, UnMasked_coords, mask , maskedValuesExtractedbg
+        return Masked_data, maskedValues_coordsOnly, filtered_Data_WithoutZero, UnMasked_coords, mask, maskedValuesExtractedbg
 
-
-    
     def apply_otsu_segmentation(self, save_masks_to=None):
         """
         Apply Otsu's thresholding method to segment foreground from background.
@@ -147,7 +154,6 @@ class DataPreprocessor:
 #         print(f"\n ---------------------> /// Finished executing method: {func.__name__} \\\ <--------------------------------------------------\n")
 #         return results
 #     return wrapper
-
 
 
 ########## --Binwidth explorer and finding the peaks automatically from the data, this can be generalize ##########
@@ -218,7 +224,7 @@ class BinWidthExplorer(DataPreprocessor):
             if plot:
                 plt.figure(figsize=(6, 3))
                 plt.hist(self.data, bins=num_bins, alpha=0.6,
-                        color='skyblue', edgecolor='black', density=True)
+                         color='skyblue', edgecolor='black', density=True)
                 plt.bar(bin_centers, counts, width=bw,
                         alpha=0.6, edgecolor='black')
                 plt.axvline(peak_val, color='red', linestyle='--',
@@ -237,6 +243,7 @@ class BinWidthExplorer(DataPreprocessor):
                 plt.close()
 
         return best_match
+
     @logfunction
     def fit_gaussian_to_peak(self, peak_range, binwidth, key, save_dir=None):
         """ 
@@ -257,7 +264,7 @@ class BinWidthExplorer(DataPreprocessor):
 
         x = np.linspace(peak_range[0], peak_range[1],
                         number_of_values)  # 10000
-        
+
         p = norm.pdf(x, mu, std)
         nbins = int((peak_range[1] - peak_range[0])/binwidth) + 1
         nbins = 1000
@@ -333,7 +340,7 @@ class BinWidthExplorer(DataPreprocessor):
         else:
             mask = (self.data >= peak_range[0]) & (self.data <= peak_range[1])
             peak_data = self.data[mask]
-            data_reshaped = peak_data.reshape(-1,1)
+            data_reshaped = peak_data.reshape(-1, 1)
             number_of_values = len(peak_data)
 
         gmm = GaussianMixture(n_components=n_components,
@@ -722,9 +729,6 @@ class BinWidthExplorer(DataPreprocessor):
     #     save_dir="results/quantile_plots"
     # )
 
-    
-
-
     @staticmethod
     def WinwidthExplorer_PicbwFindPeak(data, d=3, plothist=False, TargetPeak=None):
         """ 
@@ -753,7 +757,8 @@ class BinWidthExplorer(DataPreprocessor):
             # bin_edges: the boundaries of the bins
 
                 PeakArgument = np.argwhere(max(counts))
-                peakValue = bin_edges[PeakArgument] + bin_edges[PeakArgument + 1]/2
+                peakValue = bin_edges[PeakArgument] + \
+                    bin_edges[PeakArgument + 1]/2
 
         plt.figure(figsize=(6, 4))
         plt.hist(data, bins=nbins)

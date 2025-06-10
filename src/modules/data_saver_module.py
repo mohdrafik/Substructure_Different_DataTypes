@@ -3,7 +3,8 @@ import json
 import scipy.io as sio
 import numpy as np
 from pathlib import Path
-
+import json
+import pandas as pd
 
 # Decorator to log method execution
 # This decorator can be used to log the execution of methods in the DataSaver class.
@@ -65,7 +66,7 @@ class DataSaver:
     @decoratorLog
     def save_masked_Unmasked_into_npy_mat(save_dir, base_name,
                             Masked_data, masked_coords,
-                            filtered_data, unmasked_coords, mask):
+                            filtered_data, unmasked_coords, mask, bgDataonly):
         """
         Save the masked data and coordinates into .npy and .mat files.
 
@@ -94,6 +95,7 @@ class DataSaver:
         np.save(os.path.join(save_dir, f"{base_name}_filtered_data.npy"), filtered_data)
         np.save(os.path.join(save_dir, f"{base_name}_unmasked_coords.npy"), unmasked_coords)
         np.save(os.path.join(save_dir, f"{base_name}_mask_bool.npy"), mask)
+        np.save(os.path.join(save_dir, f"{base_name}_bgmaskvalues.npy"), bgDataonly)
 
         # Save .mat file with x,y,z,1/0 (assuming 3D coordinates)
         #  Create labels
@@ -110,6 +112,86 @@ class DataSaver:
         # Save as .mat
         save_path = os.path.join(save_dir, f"{base_name}_coords_mask_label.mat")
         sio.savemat(save_path, {'coords_mask_label': all_coords_labeled})
+
+###########################################################################################################
+    # This module provides a DataSaver class that can be used to save metadata or results to JSON format.
+    @staticmethod
+    @decoratorLog
+    def save_background_foreground_stats(
+        data,
+        Masked_data,
+        maskedValues_coordsOnly,
+        filtered_Data_WithoutZero,
+        UnMasked_coords,
+        mask,
+        bgDataonly,
+        filenameWithoutExtension,
+        save_dir
+    ):
+        """
+        Calculate and save background/foreground statistics for a given dataset.
+
+        Args:
+            data (np.ndarray): Original data array.
+            Masked_data (np.ndarray): Foreground-masked data.
+            maskedValues_coordsOnly (np.ndarray): Coordinates of masked (background) values.
+            filtered_Data_WithoutZero (np.ndarray): Foreground values after masking.
+            UnMasked_coords (np.ndarray): Coordinates of unmasked (foreground) values.
+            mask (np.ndarray): Boolean mask for background.
+            bgDataonly (np.ndarray): Array with only background values.
+            filenameWithoutExtension (str): Key for stats dictionary.
+            save_dir (Path or str): Directory to save the JSON file.
+
+        Returns:
+            dict: The updated all_stats dictionary.
+        """
+        # Ensure mask is boolean
+        mask_bool = mask.astype(bool)
+
+        file_stats = {
+            "data_shape_before_removing_zeros": (data.shape),
+            "data_shape_after_removing_zeros": (np.array(data[data != 0]).shape),
+            "total_points_nonzero": int(np.count_nonzero(data > 0)),
+            "background_points": int(np.count_nonzero(mask_bool)),
+            "background_percentage": float((np.count_nonzero(mask_bool) / data.size) * 100),
+            "foreground_points": int(np.count_nonzero(Masked_data > 0)),
+            "foreground_percentage": float((np.count_nonzero(Masked_data > 0) / data.size) * 100),
+            "sum_bg_fg": int(np.count_nonzero(mask_bool) + np.count_nonzero(Masked_data > 0)),
+            "total_elements": int(data.size),
+            "maskedValues_coordsOnly_shape": list(maskedValues_coordsOnly.shape),
+            "filtered_Data_WithoutZero_shape": list(filtered_Data_WithoutZero.shape),
+            "UnMasked_coords_shape": list(UnMasked_coords.shape),
+            "bgDataonly_nonzero_count": int(np.count_nonzero(bgDataonly))
+        }
+
+        summary = {filenameWithoutExtension: file_stats}
+        json_save_path = os.path.join(str(save_dir), "background_foreground_stats.json")
+
+        if os.path.exists(json_save_path):
+            with open(json_save_path, "r") as f:
+                all_stats = json.load(f)
+        else:
+            all_stats = {}
+
+        all_stats.update(summary)
+
+        with open(json_save_path, "w") as f:
+            json.dump(all_stats, f, indent=4)
+
+        print(f"Saved stats for {filenameWithoutExtension} to {json_save_path}")
+        # Convert all_stats to a DataFrame for CSV export
+        df = pd.DataFrame.from_dict(all_stats, orient='index')
+        csv_save_path = os.path.join(str(save_dir), "background_foreground_stats.csv")
+        df.to_csv(csv_save_path)
+        print(f"Saved CSV summary to {csv_save_path}")
+        
+        return all_stats
+
+# Example usage:
+# all_stats = save_background_foreground_stats(
+#     data, Masked_data, maskedValues_coordsOnly, filtered_Data_WithoutZero,
+#     UnMasked_coords, mask, bgDataonly, filenameWithoutExtension, save_dir
+# )    
 
 
 # Example usage

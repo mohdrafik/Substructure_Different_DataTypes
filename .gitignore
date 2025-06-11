@@ -239,3 +239,6 @@ src/modules/test_check.py
 resolve_notebook_conflicts.py
 resolve_notebook_conflicts.sh
 .idea/
+plots/just_test.py
+src/garbage2_test.py
+test_justcheck.py

@@ -66,6 +66,8 @@ class DataPlotter:
             self.save_dir.mkdir(parents=True, exist_ok=True)
 
         self.files = readlistFiles(data_path=self.data_dir.relative_to(self.base_dir), keyword=".npy")
+        # USAGE:  PLOTTER = DataPlotter(data_dir=data_dir, base_dir=base_dir, save_results=True, save_dir=save_dir)
+        # files = plotter.files # this will read all files(only file not the filewithpath) from the data_dir and save them in self.files.
 
     def _generate_save_path(self, filename_stem, suffix=".png"):
         return self.save_dir / f"{filename_stem}{suffix}"
@@ -74,6 +76,11 @@ class DataPlotter:
     @staticmethod
     @decoratorLog
     def create_mesh_visualize_from_volumeData(volumeData, grid_factor, simplify=True, threshold ='percentile', percentileValue= None,  color_mode='gradient'):
+        """" simplify means to reduce the number of vertices and faces in the mesh, making it easier to visualize and process.
+         simplify :it is done by increasing/ decreasing the grid_factor
+          grid_factor : -> increase  then make more smooth mesh.
+
+        """
         volume = volumeData
         flat = volume[volume > 0].flatten()
         if threshold == 'percentile':
@@ -164,60 +171,99 @@ class DataPlotter:
     #     o3d.visualization.draw_geometries([mesh], mesh_show_back_face=True)
 
 #################################################################################################################
+    @decoratorLog
     def plot_simple(self, file, save_name=None):
-        data = np.load(file).flatten().reshape(-1, 1)
+        fpath = Path(self.data_dir) / file
+        data = np.load(fpath).flatten().reshape(-1, 1)
+        data = data[data != 0]  # Remove zeros if any because in the time of removing background/masking we made these values to zero.
+        
         x_data = np.linspace(data.min(), data.max(), len(data))
 
-        plt.plot(x_data, data, '.', color='blue', markersize=0.4)
-        plt.title(f"{file.stem} Linearly Spaced Vector")
-        plt.xlabel('linearly spaced vector from data itself')
-        plt.ylabel('original Values')
-        plt.grid(True)
+        plt.figure(figsize=(6, 4))
+
+        plt.plot(x_data, data, '.', color='blue', markersize=0.6)
+        plt.title(f"{file.replace('_masked_data.npy', '')} Filtered Data", fontsize=12, fontweight='bold')
+        plt.xlabel('Linearly spaced values', fontsize=11)
+        plt.ylabel('Refractive Index (RI)', fontsize=11)
+        plt.xticks(fontsize=10)
+        plt.yticks(fontsize=10)
+        plt.grid(True, linestyle='--', linewidth=0.4, alpha=1.0)  # 	alpha=1.0, linewidth=0.6, color='gray'
+# Make plot borders (spines) visible other wise comment this portion
+        ax = plt.gca()
+        for spine in ax.spines.values():
+            spine.set_visible(True)
+            spine.set_linewidth(0.1)   # Make border thicker 1.2
+            spine.set_color('gray')   # Set border color
+
+           
+        plt.tight_layout()
 
         if self.save_results:
-            save_path = self._generate_save_path(save_name or file.stem)
-            plt.savefig(save_path, dpi=300)
+            # save_path = self._generate_save_path(save_name or file.stem, suffix=".pdf")  # use vector format
+            save_path = self._generate_save_path(save_name or file.strip('.npy') + '_simple_plot' )  # use vector format
+            plt.savefig(save_path, dpi=600, bbox_inches='tight', transparent=True) # # Transparent False = solid background
+            print(f"Saved IEEE-quality plot at: {save_path}")
 
+        # plt.show()
         plt.close()
 
+        # plt.plot(x_data, data, '.', color='blue', markersize=0.4)
+        # plt.title(f"{file.strip('.')[0]} Filtered Data")
+        # plt.xlabel('x-linearly spaced data ')
+        # plt.ylabel('RI values')
+        # plt.grid(True)
+
+        # if self.save_results:
+        #     save_path = self._generate_save_path(save_name or file.strip('.npy') + '_simple_plot')
+        #     plt.savefig(save_path, dpi=300)
+
+        # plt.close()
+
 #################################################################################################################
-    def plot_complex(self, file, save_name=None):
-        data = np.load(file).flatten()
+    @decoratorLog
+    def plot_complex(self, file, withMarkers = False, save_name=None):
+        fpath = Path(self.data_dir) / file
+        data = np.load(fpath).flatten().reshape(-1, 1)
+        data = data[data != 0]  # Remove zeros if any because in the time of removing background/masking we made these values to zero.
         x_data = np.linspace(data.min(), data.max(), len(data))
 
-        hist_vals, bin_edges = np.histogram(data, bins=10000)
-        dominant_bin_index = np.argmax(hist_vals)
-        bin_start, bin_end = bin_edges[dominant_bin_index], bin_edges[dominant_bin_index + 1]
-        flat_band = data[(data >= bin_start) & (data < bin_end)]
-
-        if flat_band.size == 0:
-            print(f"No flat band detected in file: {file.name}")
-            return
-
-        flat_min, flat_max, flat_mean = flat_band.min(), flat_band.max(), flat_band.mean()
-
-        plt.figure(figsize=(10, 6))
+        
+        plt.figure(figsize=(6, 4))
         scatter = plt.scatter(x_data, data, c=data, cmap='viridis', s=0.4)
 
-        flat_y_vals = [("Min", flat_min, 'red'), ("Mean", flat_mean, 'blue'), ("Max", flat_max, 'black')]
-        used_y = []
-        x_text_position = x_data[0] - 0.0002*(x_data[-1] - x_data[0])  # shift right
-    
-        if file[-5:-4] =='h':
-            text_gap = 0.12* max(abs(flat_max - flat_min), 1e-1)  # vertical spacing
-        else:
-            text_gap = 0.05* max(abs(flat_max - flat_min), 1e-1)  # vertical spacing
-            
+        if withMarkers:
+            hist_vals, bin_edges = np.histogram(data, bins=10000)
+            dominant_bin_index = np.argmax(hist_vals)
+            bin_start, bin_end = bin_edges[dominant_bin_index], bin_edges[dominant_bin_index + 1]
+            flat_band = data[(data >= bin_start) & (data < bin_end)]
 
-        for i, (label, y_val, color) in enumerate(flat_y_vals):
-            y_text = y_val + i * text_gap  # stagger vertically (fixed gap)
-            plt.axhline(y=y_val, color=color, linestyle='--', linewidth=0.6)
+            if flat_band.size == 0:
+                print(f"No flat band detected in file: {file.name}")
+                return
 
-            plt.text(x_text_position, y_text, f'{label}: {y_val:.16f}',
-                    color=color, fontsize=8,
-                    verticalalignment='bottom', horizontalalignment='left',
-                    bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
+            flat_min, flat_max, flat_mean = flat_band.min(), flat_band.max(), flat_band.mean()
+
+            # scatter = plt.scatter(x_data, data, c=data, cmap='viridis', s=0.4)
+
+            flat_y_vals = [("Min", flat_min, 'red'), ("Mean", flat_mean, 'blue'), ("Max", flat_max, 'black')]
+            used_y = []
+            x_text_position = x_data[0] - 0.0002*(x_data[-1] - x_data[0])  # shift right
         
+            if file[-5:-4] =='h':
+                text_gap = 0.12* max(abs(flat_max - flat_min), 1e-1)  # vertical spacing
+            else:
+                text_gap = 0.05* max(abs(flat_max - flat_min), 1e-1)  # vertical spacing
+                
+
+            for i, (label, y_val, color) in enumerate(flat_y_vals):
+                y_text = y_val + i * text_gap  # stagger vertically (fixed gap)
+                plt.axhline(y=y_val, color=color, linestyle='--', linewidth=0.6)
+
+                plt.text(x_text_position, y_text, f'{label}: {y_val:.16f}',
+                        color=color, fontsize=8,
+                        verticalalignment='bottom', horizontalalignment='left',
+                        bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
+            
 
         # for label, y_val, color in flat_y_vals:
         #     plt.axhline(y=y_val, color=color, linestyle='--', linewidth=1)
@@ -228,20 +274,55 @@ class DataPlotter:
         #     used_y.append(y_text)
         #     plt.text(x_data[0], y_text, f'{label}: {y_val:.8f}', color=color, fontsize=8, verticalalignment='bottom')
 
-        plt.title(f"{file.stem}")
-        plt.xlabel('Linearly spaced vector from data')
-        plt.ylabel(f" RI value ")
-        plt.grid(True)
+    # Filtered Data	Data after noise/background has been filtered out.
+        # plt.title(f"{file.strip('.')[0]} Filtered Data.")
+        # plt.xlabel('x-linearly spaced data')
+        # plt.ylabel(f" RI value ")
+        # plt.grid(True)
+        # cbar = plt.colorbar(scatter)
+        # cbar.set_label('Intensity')
+
+        # if self.save_results:
+        #     save_path = self._generate_save_path(save_name or file.strip('.npy') + '_complex_plot')
+        #     plt.tight_layout()
+        #     plt.savefig(save_path, dpi=300)
+        #     print(f"Plot saved at: {save_path}")
+
+        # plt.show()
+        # plt.close()
+        
+
+        
+        # plt.plot(x_data, data, '.', color='black', markersize=1.0)
+        
+        
+
+        plt.title(f"{file.replace('_masked_data.npy', '')} Filtered Data", fontsize=12, fontweight='bold')
+        plt.xlabel('Linearly spaced values', fontsize=11)
+        plt.ylabel('Refractive Index (RI)', fontsize=11)
+        plt.xticks(fontsize=10)
+        plt.yticks(fontsize=10)
+        plt.grid(True, linestyle='--', linewidth=0.4, alpha=1.0)  # alpha=1.0, linewidth=0.6, color='gray'
+        
+        # Make plot borders (spines) visible other wise comment this portion
+        ax = plt.gca()  # Get current axes  
+        for spine in ax.spines.values():
+            spine.set_visible(True)
+            spine.set_linewidth(0.1)   # Make border thicker 1.2
+            spine.set_color('gray')   # Set border color    
+        # plt.tight_layout()
+
         cbar = plt.colorbar(scatter)
         cbar.set_label('Intensity')
+        
+        plt.tight_layout()
 
         if self.save_results:
-            save_path = self._generate_save_path(save_name or file.stem + '_marked')
-            plt.tight_layout()
-            plt.savefig(save_path, dpi=300)
-            print(f"Plot saved at: {save_path}")
-
-        plt.show()
+            # save_path = self._generate_save_path(save_name or file.stem, suffix=".pdf")  # use vector format
+            save_path = self._generate_save_path(save_name or file.strip('.npy') + '_complex_plot' )  # use vector format
+            plt.savefig(save_path, dpi=600, bbox_inches='tight', transparent=True)
+            print(f"Saved IEEE-quality plot at: {save_path}")
+        # plt.show()
         plt.close()
 
 

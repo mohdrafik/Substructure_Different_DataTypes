@@ -7,9 +7,9 @@ from pathlib import Path
 
 class HistogramAnalyzer:
     
-    def __init__(self, path,bins = 'fd'):
+    def __init__(self, path, bins = 'fd'):
         self.path = Path(path)
-        self.results_dir = self.path / "results" / "histogramrawData"
+        self.results_dir = self.path.parent.parent.parent / "results" / "histogram_processed_data"
         self.results_dir.mkdir(parents=True, exist_ok=True)
         self.files = [f for f in os.listdir(self.path) if f.endswith('.mat') or f.endswith('.npy')]
         print(f"Number of data files found: {len(self.files)}")
@@ -41,45 +41,63 @@ class HistogramAnalyzer:
         plt.close()
         print(f"Saved histogram and envelope: {save_path}")
     
-    def fit_gaussian_and_plot_peak(self, data, filename, nbins=800):
+    def fit_gaussian_and_plot_peak(self, data, filename, nbins=800, fit_gaussian = False):
         counts, bin_edges = np.histogram(data, bins=nbins)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
         
         # Fit a Gaussian
-        mu, std = norm.fit(data)
         
         # Plot
         plt.figure(figsize=(6,5))
-        plt.hist(data, bins=nbins, density=True, alpha=0.6, color='g', edgecolor='black')
-        xmin, xmax = plt.xlim()
-        x = np.linspace(xmin, xmax, 1000)
-        p = norm.pdf(x, mu, std)
-        plt.plot(x, p, 'k', linewidth=2)
-        plt.title(f"Gaussian Fit: μ={mu:.4f}, σ={std:.4f}")
+
+        if fit_gaussian is True:
+            plt.hist(data, bins=nbins, density=True, alpha=0.6, color='g', edgecolor='black')
+            mu, std = norm.fit(data)
+            xmin, xmax = plt.xlim()
+            x = np.linspace(xmin, xmax, 1000)
+            p = norm.pdf(x, mu, std)
+            plt.plot(x, p, 'k', linewidth=2)
+            plt.title(f"Gaussian Fit: μ={mu:.4f}, σ={std:.4f}")
+            plt.xlabel('Value')
+            plt.ylabel('Density')
+            plt.tight_layout()
+
+            save_path = self.results_dir / f"{filename}_gaussian_peak.png"
+            plt.savefig(save_path, dpi=400, bbox_inches='tight')
+            plt.close()
+
+            print(f"Saved Gaussian peak fit: {save_path}")
+            
+            return mu, std
+
+
+
+        plt.hist(data, bins=nbins,alpha=0.6, color='g', edgecolor='green')
+        plt.title(f"histogram {filename}")
         plt.xlabel('Value')
         plt.ylabel('Density')
-        plt.tight_layout()
-        
-        save_path = self.results_dir / f"{filename}_gaussian_peak.png"
+        plt.tight_layout() 
+        save_path = self.results_dir / f"{filename}_histogram.png"
         plt.savefig(save_path, dpi=400, bbox_inches='tight')
         plt.close()
-        print(f"Saved Gaussian peak fit: {save_path}")
-        
-        return mu, std
 
-    def process_all_files(self):
+        print(f"normal histogram : {save_path}")
+      
+
+    def process_all_files(self,fit_gaussian = False):
         for idx, filename in enumerate(self.files, 1):
             print(f"Processing file {idx}: {filename}")
             data = self.load_data(filename)
             clean_filename = filename.replace('.mat', '').replace('.npy', '')
             self.plot_histogram_with_envelope(data, clean_filename)
+
             self.fit_gaussian_and_plot_peak(data, clean_filename)
 
 if __name__ == "__main__":
     path = input("Enter the path to your .npy or .mat files: ")
 
     analyzer = HistogramAnalyzer(path)
-    analyzer.process_all_files()
+    analyzer.process_all_files(fit_gaussian = False)
 
 
 

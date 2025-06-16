@@ -156,9 +156,9 @@ class EnhancedClustering:
         kmeans_coords_with_labels = np.hstack((coords, kmeans_labels.reshape(-1, 1)))  # [x, y, z, kmeans_label]
         # Save as .npy
         fullFilepath = Path(fileFullpath) 
-        self.output_dir = self.output_dir/"seperatematplot"
-        self.output_dir.mkdir(parents=True,exist_ok = True)
-        kmeans_intResultDir = self.output_dir/f"kmIntensity{fullFilepath.stem}"
+        output_dir_sep = self.output_dir/f"sep_{fullFilepath.stem}"
+        output_dir_sep.mkdir(parents=True,exist_ok = True)
+        kmeans_intResultDir = output_dir_sep/f"kmIntensity{fullFilepath.stem}"
         np.save(kmeans_intResultDir,kmeans_coords_with_labels) # save .npy
         sio.savemat(kmeans_intResultDir,{"labels":kmeans_coords_with_labels})  # save .mat 
 
@@ -177,6 +177,8 @@ class EnhancedClustering:
         plt.title(title)
         plt.colorbar(scatter)
         plt.show()
+    
+        plt.close()
 
 
 if __name__=="__main__":
@@ -188,7 +190,7 @@ if __name__=="__main__":
     print(datapath)
     RES_DIR = Path.cwd()/"results"
     kmeansdbscan_Results = Path(RES_DIR)/ "kmenasdbscan_Results"
-    kmeansdbscan_Results = Path(kmeansdbscan_Results)
+    # kmeansdbscan_Results = Path(kmeansdbscan_Results)
     relativeDataPath = r'data\processed\main_fgdata'
 
     test_instance = EnhancedClustering(datapath=datapath, output_dir=kmeansdbscan_Results,

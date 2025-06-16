@@ -79,7 +79,7 @@ class EnhancedClustering:
             volume[volume == self.THRESHOLD_VALUE] = 0  # Threshold to remove background
 
         else:
-            print(f"data volume is alreday thresholded and proceesed as Can see the proceesd path:{self.fpath}")
+            print(f" \n data volume is alreday thresholded and proceesed as Can see the proceesd path:{self.fpath[0]}\n")
 
         return volume
 

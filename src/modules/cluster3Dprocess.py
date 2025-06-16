@@ -13,6 +13,7 @@ import plotly.io as pio
 import plotly.graph_objects as go
 from sklearn.neighbors import NearestNeighbors
 
+
 try:
     import hdbscan # type: ignore
     hdbscan_available = True
@@ -37,8 +38,6 @@ class Cluster3DProcessor:
         Output Directory	 All results saved in cluster_output/
     
     """
-
-
 
     def __init__(self, npy_file,Baseoutput_dir, method='dbscan', save_outputs=True, downsample=True, max_points=100000,save_subvolumes=True, visualize_interactive=True):
         self.npy_file = npy_file
@@ -167,5 +166,5 @@ if __name__ == "__main__":
                 )
         
         coords, labels = processor.run()
-        print(f"✅ Finished {os.path.basename(npyfile)} - Clusters: {len(set(labels)) - (1 if -1 in labels else 0)}")
+        print(f"Finished {os.path.basename(npyfile)} - Clusters: {len(set(labels)) - (1 if -1 in labels else 0)}")
 

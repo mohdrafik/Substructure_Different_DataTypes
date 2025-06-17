@@ -10,6 +10,9 @@ from sklearn.cluster import KMeans, DBSCAN
 from sklearn.preprocessing import StandardScaler
 from mpl_toolkits.mplot3d import Axes3D
 import open3d as o3d
+
+from matplotlib import colormaps
+
 from path_manager import addpath
 addpath()
 
@@ -146,7 +149,7 @@ class EnhancedClustering:
     # def run_dbscan_per_cluster(self, feature_data, kmeans_labels, eps=0.06, min_samples=5):
 
     @logfunction
-    def run_dbscan_per_cluster(self, feature_data, kmeans_labels, DBonlyintensity = False):
+    def run_dbscan_per_cluster(self, feature_data, kmeans_labels, DBonlyintensity = True, withNormalization = True):
         dbscan_final_labels = -np.ones(len(feature_data), dtype=int) # array([-1, -1, -1, -1, -1 .......... ]) of size of featutr_data. 
         label_offset = 0
         for cluster_id in np.unique(kmeans_labels):
@@ -154,10 +157,20 @@ class EnhancedClustering:
             # example. array([2, 3]),)-> without zero. , # array([2, 3]) -> with zero.
             db = DBSCAN(eps=self.eps_extractedFromData,
                         min_samples=self.min_samples_loadFromData)  # using the DBSCAN
+            
             if DBonlyintensity:
-                sub_labels = db.fit_predict(feature_data[indices, 3].reshape(-1, 1)) # want to apply dbscan only on intensity/RI values. 
+                if withNormalization:
+                    data_scaled = StandardScaler().fit_transform(feature_data[indices, 3].reshape(-1,1))
+                    # sub_labels = db.fit_predict(data_scaled).reshape(-1, 1) # want to apply dbscan only on intensity/RI values.
+                    sub_labels = db.fit_predict(data_scaled) # .reshape(-1, 1)removed here want to apply dbscan only on intensity/RI values.
+                else:
+                    sub_labels = db.fit_predict(feature_data[indices, 3].reshape(-1, 1)) # want to apply dbscan only on intensity/RI values. 
             else:
-                sub_labels = db.fit_predict(feature_data[indices])  # dbscan on all  
+                if withNormalization :
+                    data_scaled = StandardScaler().fit_transform(feature_data[indices])
+                    sub_labels = db.fit_predict(data_scaled)  # dbscan on all  
+                else:
+                    sub_labels = db.fit_predict(feature_data[indices])  # dbscan on all  
 
             # feature_data[indices] -> returns the indices corresponding rows from feature data. let'say if indices = [0,2,5]-> it return the 0,2,5th rows from the data. 
             # feature_data has shape (N, 4): [x, y, z, value]
@@ -171,11 +184,21 @@ class EnhancedClustering:
 
     @logfunction
     def save_results(self, dbscan_final_labels, kmeans_labels, coords, fileFullpath):
-        os.makedirs(self.output_dir, exist_ok=True)
-        np.save(os.path.join(self.output_dir, "cluster_labels.npy"), dbscan_final_labels)
-        sio.savemat(os.path.join(self.output_dir,
-                    "cluster_labels.mat"), {"labels": dbscan_final_labels})
-        np.save(os.path.join(self.output_dir, "voxel_coords.npy"), coords)
+
+        # os.makedirs(self.output_dir, exist_ok=True)
+        # np.save(os.path.join(self.output_dir, "cluster_labels.npy"), dbscan_final_labels)
+        # sio.savemat(os.path.join(self.output_dir,
+        #             "cluster_labels.mat"), {"labels": dbscan_final_labels})
+        # np.save(os.path.join(self.output_dir, "voxel_coords.npy"), coords)
+
+        fullFilepath = Path(fileFullpath)
+        kdb_coords_with_final_labels = np.hstack((coords, dbscan_final_labels.reshape(-1, 1)))  # [x, y, z, dbscan_final_labels]
+        output_dir_db = self.output_dir/ f"coord_dbfinal_Labels_{fullFilepath.stem}"
+        output_dir_db.mkdir(parents=True, exist_ok=True)
+        kmeans_dbres = output_dir_db/f"dbfinal{fullFilepath.stem}"
+        np.save(f"{kmeans_dbres}.npy", kdb_coords_with_final_labels)  # save .npy
+        sio.savemat(f"{kmeans_dbres}.mat", {"labels": kdb_coords_with_final_labels})  # save .mat
+
 
         # For saving the k-means cluster only and corresponding coordinates and labels results -------- >
         # kmeans_labels = kmeans_labels
@@ -195,16 +218,16 @@ class EnhancedClustering:
         # sio.savemat(os.path.join(kmeans_intResultDir, "kmeans_coords_labels.mat"), {"kmeans_coords_labels": kmeans_coords_with_labels})
 
     @logfunction
-    def plot_clusters(self, coords, labels, title):
+    def plot_clusters(self, coords, labels, title,filename_stem):
         fig = plt.figure(figsize=(10, 7))
         ax = fig.add_subplot(111, projection='3d')
         scatter = ax.scatter(
             coords[:, 0], coords[:, 1], coords[:, 2], c=labels, cmap='tab20', s=2)
         plt.title(title)
         plt.colorbar(scatter)
+        save_path = self.output_dir / f"{filename_stem}_allclusterSimple.png"
+        plt.savefig(save_path, dpi=300)
         plt.show()
-
-        plt.close()
         plt.close(fig)
 
     @logfunction
@@ -225,7 +248,10 @@ class EnhancedClustering:
             return
 
         # Define color map
-        colormap = cm.get_cmap('tab20', n_clusters)
+        # colormap = cm.get_cmap('tab20', n_clusters)
+        # from matplotlib import colormaps  # New module introduced in recent versions
+        colormap = colormaps.get_cmap('tab20')
+
 
         # Calculate subplot grid layout
         cols = math.ceil(math.sqrt(n_clusters))
@@ -237,13 +263,14 @@ class EnhancedClustering:
             cluster_coords = coords[indices]
 
             ax = fig.add_subplot(rows, cols, idx + 1, projection='3d')
-            color = colormap(idx)  # Get a unique color for each cluster
+            # color = colormap(idx)  # Get a unique color for each cluster
+            color = colormap(idx / n_clusters)  # fixed here
             ax.scatter(cluster_coords[:, 0], cluster_coords[:, 1], cluster_coords[:, 2], s=2, c=[color])
             ax.set_title(f"Cluster {label}", fontsize=10)
             ax.axis('off')
 
         plt.tight_layout()
-        save_path = self.output_dir / "kmenasdbscan_Results" / f"{filename_stem}_dbscan_allclusters_colored.png"
+        save_path = self.output_dir / f"{filename_stem}_dbscan_allclusters_colored.png"
         plt.savefig(save_path, dpi=300)
         plt.close(fig)
 
@@ -262,11 +289,12 @@ if __name__ == "__main__":
     relativeDataPath = r'data\processed\main_fgdata'
 
     test_instance = EnhancedClustering(datapath=datapath, output_dir=kmeansdbscan_Results,
-                                       relativeDataPath=relativeDataPath, filesuffix='.npy', THRESHOLD_VALUE=None, n_clusters=6)
+                                       relativeDataPath=relativeDataPath, filesuffix='.npy', THRESHOLD_VALUE=None, eps_extractedFromData=0.01,min_samples_loadFromData=10, n_clusters=6)
 
     # Run all methods in sequence on each file
+    count = 0
     for filewithpath in test_instance.fpath:
-
+        count +=1
         filewithpath = Path(filewithpath)
         data = np.load(filewithpath)
         print(
@@ -275,17 +303,24 @@ if __name__ == "__main__":
         # Run all methods in sequence on each file's data
         # Pass string path to load_volume to avoid Path/str issues with endswith
         volume = test_instance.load_volume(str(filewithpath))
+
         feature_data = test_instance.extract_feature_data(volume)
+
         kmeans_labels = test_instance.run_kmeans(feature_data)
+
         dbscan_labels = test_instance.run_dbscan_per_cluster(
-            feature_data, kmeans_labels)
+            feature_data, kmeans_labels, DBonlyintensity=True, withNormalization=True)
+        
         test_instance.save_results(
             dbscan_labels, kmeans_labels, feature_data[:, :3], fileFullpath=filewithpath)
 
-        test_instance.plot_clusters(
-            feature_data[:, :3], dbscan_labels, title=f"{filewithpath.stem}")
-        test_instance.plot_dbscan_clusters_subplot(feature_data[:, :3], dbscan_labels, filewithpath.stem)
-
+        # test_instance.plot_clusters(
+        #     feature_data[:, :3], dbscan_labels, title=f"{filewithpath.stem}", filename_stem = filewithpath.stem)
+        
+        test_instance.plot_dbscan_clusters_subplot(
+            feature_data[:, :3], dbscan_labels, filewithpath.stem)
+        if count ==10:
+            break
 
 
 # def VisualizeOpen3d(clusteredNPY_Path, clusteredNPY_Coords):

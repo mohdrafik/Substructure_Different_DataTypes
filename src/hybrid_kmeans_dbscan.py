@@ -1,3 +1,7 @@
+import matplotlib.cm as cm
+import math
+from functools import wraps
+from pathlib import Path
 import numpy as np
 import os
 import scipy.io as sio
@@ -8,13 +12,11 @@ from mpl_toolkits.mplot3d import Axes3D
 import open3d as o3d
 from path_manager import addpath
 addpath()
+
 from listspecificfiles import readlistFiles
 
-from pathlib import Path
-
-from functools import wraps
-
 # @staticmethod  # on top if we are defining do't need @staticmethod.
+
 def logfunction(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -27,13 +29,9 @@ def logfunction(func):
     return wrapper
 
 
-
-
-
 class EnhancedClustering:
 
-    def __init__(self, datapath, output_dir, relativeDataPath, filesuffix = None, intensityBased_Kmeans = True, THRESHOLD_VALUE = False, n_clusters = None, eps_extractedFromData =None, min_samples_loadFromData = None):
-
+    def __init__(self, datapath, output_dir, relativeDataPath, filesuffix=None, intensityBased_Kmeans=True, THRESHOLD_VALUE=False, n_clusters=None, eps_extractedFromData=None, min_samples_loadFromData=None):
         """ 
         it will use dteh both kmeans and dbscan to cluster the data
         Args:
@@ -48,119 +46,147 @@ class EnhancedClustering:
         """
         self.datapath = Path(datapath)
         self.output_dir = Path(output_dir)
-        self.THRESHOLD_VALUE = THRESHOLD_VALUE 
-        self.n_clusters = n_clusters if n_clusters is not None else  6
+        self.THRESHOLD_VALUE = THRESHOLD_VALUE
+        self.n_clusters = n_clusters if n_clusters is not None else 6
         self.relativeDataPath = relativeDataPath
-        self.filesuffix = filesuffix if filesuffix is not None else '.npy'  
+        self.filesuffix = filesuffix if filesuffix is not None else '.npy'
 
         self.intensityBased_Kmeans = intensityBased_Kmeans
-        self.eps_extractedFromData  = eps_extractedFromData  if eps_extractedFromData  is not None else 0.06
-        self.min_samples_loadFromData  = min_samples_loadFromData  if min_samples_loadFromData  is not None else 5
-        
-        # self.fpath = readlistFiles(self.relativeDataPath,'npy').file_with_Path() 
-        self.fpath = readlistFiles(self.relativeDataPath,self.filesuffix).file_with_Path() 
+        self.eps_extractedFromData = eps_extractedFromData if eps_extractedFromData is not None else 0.06
+        self.min_samples_loadFromData = min_samples_loadFromData if min_samples_loadFromData is not None else 20
 
+        # self.fpath = readlistFiles(self.relativeDataPath,'npy').file_with_Path()
+        self.fpath = readlistFiles(
+            self.relativeDataPath, self.filesuffix).file_with_Path()
 
     # THRESHOLD_VALUE =  1.334
+
     @logfunction
-    def load_volume(self,filepath):
+    def load_volume(self, filepath):
         if filepath.endswith('.npy'):
             volume = np.load(filepath)
 
         elif filepath.endswith('.mat'):
             mat = sio.loadmat(filepath)
             # Assuming your volume variable is named 'volume' in .mat
-            volume = next(v for v in mat.values() if isinstance(v, np.ndarray) and (v.ndim == 3 or v.ndim == 2))
+            volume = next(v for v in mat.values() if isinstance(
+                v, np.ndarray) and (v.ndim == 3 or v.ndim == 2))
         else:
-            raise ValueError("Unsupported file format. Use .mat or check the key for .mat File or .npy")
+            raise ValueError(
+                "Unsupported file format. Use .mat or check the key for .mat File or .npy")
 
         if self.THRESHOLD_VALUE is not None:
             # THRESHOLD_VALUE = 1.334
-            volume[volume == self.THRESHOLD_VALUE] = 0  # Threshold to remove background
+            # Threshold to remove background
+            volume[volume == self.THRESHOLD_VALUE] = 0
 
         else:
-            print(f" \n data volume is alreday thresholded and proceesed as Can see the proceesd path:{self.fpath[0]}\n")
+            print(
+                f" \n data volume is alreday thresholded and proceesed as Can see the proceesd path:{self.fpath[0]}\n")
 
         return volume
 
     @logfunction
-    def extract_features(self,volume, onlyPositiveValues = False, Nonzeros =True ):
-        coords = np.array(np.nonzero(volume)).T  # coordinates of non-zero/mainData/foreground/signal values, output will be -->  [z1,x1,y1]
+    def extract_feature_data(self, volume, onlyPositiveValues=False, Nonzeros=True):
+        # coordinates of non-zero/mainData/foreground/signal values, output will be -->  [z1,x1,y1]
+        coords = np.array(np.nonzero(volume)).T
 
-        if onlyPositiveValues: 
+        if onlyPositiveValues:
             intensities = volume[volume > 0].flatten().reshape(-1, 1)
         elif Nonzeros:
             intensities = volume[volume != 0].flatten().reshape(-1, 1)
         else:
-            intensities = volume.flatten().reshape(-1,1)
+            intensities = volume.flatten().reshape(-1, 1)
 
-        return np.hstack((coords, intensities))  # return like this [0,1,2, 1.334]
+        # return like this [0,1,2, 1.334]
+        return np.hstack((coords, intensities))
+
     @logfunction
-    def run_kmeans(self, All_extracted_faetureData, scaling = False, intensityFeature_only = True, allFeatures = False):
-        """ All_extracted_featureData: is return from the extract_faetures() :  [[0,1,2, 1.334] ... [coords,intensity_value] .. []] of size Nx4 
+    def run_kmeans(self, All_extracted_faetureData, scaling=False, intensityFeature_only=True, allFeatures=False):
+        """ 
+        All_extracted_featureData: is return from the extract_faetures() :  [[0,1,2, 1.334] ... [coords,intensity_value] .. []] of size Nx4 
         allFeatures and intensityFeature_only is complementary to ecah other means one True and other is False.
 
-     """
+       """
         if intensityFeature_only and scaling:
 
-            data_scaled = StandardScaler().fit_transform(All_extracted_faetureData[:,3])
+            data_scaled = StandardScaler().fit_transform(
+                All_extracted_faetureData[:, 3])
 
             # DataFor_kmeans = data_scaled[:,3]  # intensities[:,0] or X[:,3]  # Extracting only the intensity values from X, which is the last column(here is 4th column) of X
             DataFor_kmeans = data_scaled.reshape(-1, 1)
-        
-        elif intensityFeature_only :
 
-            DataFor_kmeans = All_extracted_faetureData[:,3].reshape(-1,1)  # intensities[:,0] or X[:,3]  # Extracting only the intensity values from X, which is the last column(here is 4th column) of X
-        elif allFeatures and scaling :
+        elif intensityFeature_only:
+
+            # intensities[:,0] or X[:,3]  # Extracting only the intensity values from X, which is the last column(here is 4th column) of X
+            DataFor_kmeans = All_extracted_faetureData[:, 3].reshape(-1, 1)
+
+        elif allFeatures and scaling:
 
             data_scaled = StandardScaler().fit_transform(All_extracted_faetureData)
 
             DataFor_kmeans = data_scaled
 
         elif allFeatures:
-            
-            DataFor_kmeans = All_extracted_faetureData  # intensities[:,0] or X[:,3]  # Extracting only the intensity values from X, which is the last column(here is 4th column) of X
+
+            # intensities[:,0] or X[:,3]  # Extracting only the intensity values from X, which is the last column(here is 4th column) of X
+            DataFor_kmeans = All_extracted_faetureData
         else:
 
             print(f" entering wrong conditions: ! check")
 
+        kmeans = KMeans(n_clusters=self.n_clusters,
+                        init='k-means++', random_state=42)
 
-        kmeans = KMeans(n_clusters = self.n_clusters, init= 'k-means++', random_state=42)
+        # kmeans_labels -> returns labels directly
+        return kmeans.fit_predict(DataFor_kmeans) 
+        # kmeans.labels_ --> kmeans_labels is one row (1xN) of labels (0,1,.., n_clusters -1) , N is the number row = 200x200x200 for data size of z= 200,y = 200, x =200, each coordinates has a label. 
+        # as output → array of cluster assignments for each data point, storing the cluster labels for all samples in the kmeans_labels variable, so you can use them later for saving or analyzing clusters / future use.
 
-        return kmeans.fit_predict(DataFor_kmeans)  # kmeans_labels -> returns labels directly 
-    
+    # def run_dbscan_per_cluster(self, feature_data, kmeans_labels, eps=0.06, min_samples=5):
 
-    # def run_dbscan_per_cluster(self, X_scaled, kmeans_labels, eps=0.06, min_samples=5):
     @logfunction
-    def run_dbscan_per_cluster(self, X_scaled, kmeans_labels):
-        final_labels = -np.ones(len(X_scaled), dtype=int)
+    def run_dbscan_per_cluster(self, feature_data, kmeans_labels, DBonlyintensity = True):
+        dbscan_final_labels = -np.ones(len(feature_data), dtype=int) # array([-1, -1, -1, -1, -1 .......... ]) of size of featutr_data. 
         label_offset = 0
         for cluster_id in np.unique(kmeans_labels):
-            indices = np.where(kmeans_labels == cluster_id)[0]
-            db = DBSCAN(eps=self.eps_extractedFromData, min_samples= self.min_samples_loadFromData) # using the DBSCAN 
-            sub_labels = db.fit_predict(X_scaled[indices])
+            indices = np.where(kmeans_labels == cluster_id)[0]   # np.where(condition) -> Tuple of arrays;  np.where(condition)[0] -> 1D array of indices
+            # example. array([2, 3]),)-> without zero. , # array([2, 3]) -> with zero.
+            db = DBSCAN(eps=self.eps_extractedFromData,
+                        min_samples=self.min_samples_loadFromData)  # using the DBSCAN
+            if DBonlyintensity:
+                sub_labels = db.fit_predict(feature_data[indices, 3].reshape(-1, 1)) # want to apply dbscan only on intensity/RI values. 
+            else:
+                sub_labels = db.fit_predict(feature_data[indices])  # dbscan on all  
+
+            # feature_data[indices] -> returns the indices corresponding rows from feature data. let'say if indices = [0,2,5]-> it return the 0,2,5th rows from the data. 
+            # feature_data has shape (N, 4): [x, y, z, value]
+            # indices contains the row indices in feature_data that belong to the current KMeans cluster,  
+
             sub_labels[sub_labels != -1] += label_offset
-            final_labels[indices] = sub_labels
+            dbscan_final_labels[indices] = sub_labels
             label_offset += sub_labels.max() + 1 if sub_labels.max() != -1 else 0
-        return final_labels
+
+        return dbscan_final_labels
+
     @logfunction
-    def save_results(self,labels, coords,fileFullpath):
+    def save_results(self, dbscan_final_labels, kmeans_labels, coords, fileFullpath):
         os.makedirs(self.output_dir, exist_ok=True)
-        np.save(os.path.join(self.output_dir, "cluster_labels.npy"), labels)
-        sio.savemat(os.path.join(self.output_dir, "cluster_labels.mat"), {"labels": labels})
+        np.save(os.path.join(self.output_dir, "cluster_labels.npy"), dbscan_final_labels)
+        sio.savemat(os.path.join(self.output_dir,
+                    "cluster_labels.mat"), {"labels": dbscan_final_labels})
         np.save(os.path.join(self.output_dir, "voxel_coords.npy"), coords)
 
-
         # For saving the k-means cluster only and corresponding coordinates and labels results -------- >
-        kmeans_labels = labels
+        # kmeans_labels = kmeans_labels
         kmeans_coords_with_labels = np.hstack((coords, kmeans_labels.reshape(-1, 1)))  # [x, y, z, kmeans_label]
-        # Save as .npy
-        fullFilepath = Path(fileFullpath) 
-        output_dir_sep = self.output_dir/f"sep_{fullFilepath.stem}"
-        output_dir_sep.mkdir(parents=True,exist_ok = True)
+        # Save as .npy and .mat for all kmeans labels with coordinates.
+        fullFilepath = Path(fileFullpath)
+        output_dir_sep = self.output_dir/ f"coord_kmeansLabels_{fullFilepath.stem}"
+        output_dir_sep.mkdir(parents=True, exist_ok=True)
         kmeans_intResultDir = output_dir_sep/f"kmIntensity{fullFilepath.stem}"
-        np.save(kmeans_intResultDir,kmeans_coords_with_labels) # save .npy
-        sio.savemat(kmeans_intResultDir,{"labels":kmeans_coords_with_labels})  # save .mat 
+        np.save(f"{kmeans_intResultDir}.npy", kmeans_coords_with_labels)  # save .npy
+        sio.savemat(f"{kmeans_intResultDir}.mat", {"labels": kmeans_coords_with_labels})  # save .mat
 
         # kmeans_intResultDir = os.path.join(self.output_dir,f"kmIntensity{self.fpath.stem}")
         # os.makedirs(kmeans_intResultDir,exist_ok=True)
@@ -168,50 +194,97 @@ class EnhancedClustering:
         # # Save as .mat
         # sio.savemat(os.path.join(kmeans_intResultDir, "kmeans_coords_labels.mat"), {"kmeans_coords_labels": kmeans_coords_with_labels})
 
-
     @logfunction
     def plot_clusters(self, coords, labels, title):
         fig = plt.figure(figsize=(10, 7))
         ax = fig.add_subplot(111, projection='3d')
-        scatter = ax.scatter(coords[:, 0], coords[:, 1], coords[:, 2], c=labels, cmap='tab20', s=2)
+        scatter = ax.scatter(
+            coords[:, 0], coords[:, 1], coords[:, 2], c=labels, cmap='tab20', s=2)
         plt.title(title)
         plt.colorbar(scatter)
         plt.show()
-    
+
         plt.close()
+        plt.close(fig)
+
+    @logfunction
+    def plot_dbscan_clusters_subplot(self, coords, dbscan_labels, filename_stem):
+        """
+        Plot all DBSCAN clusters (excluding noise) in subplots with custom colors.
+
+        Args:
+            coords (np.ndarray): Nx3 array of voxel coordinates.
+            dbscan_labels (np.ndarray): Cluster labels assigned by DBSCAN.
+            filename_stem (str): Base filename used for saving plots.
+        """
+        unique_labels = [label for label in np.unique(dbscan_labels) if label != -1]
+        n_clusters = len(unique_labels)
+
+        if n_clusters == 0:
+            print(f"No valid clusters to plot for {filename_stem}.")
+            return
+
+        # Define color map
+        colormap = cm.get_cmap('tab20', n_clusters)
+
+        # Calculate subplot grid layout
+        cols = math.ceil(math.sqrt(n_clusters))
+        rows = math.ceil(n_clusters / cols)
+
+        fig = plt.figure(figsize=(5 * cols, 4 * rows))
+        for idx, label in enumerate(unique_labels):
+            indices = np.where(dbscan_labels == label)[0]
+            cluster_coords = coords[indices]
+
+            ax = fig.add_subplot(rows, cols, idx + 1, projection='3d')
+            color = colormap(idx)  # Get a unique color for each cluster
+            ax.scatter(cluster_coords[:, 0], cluster_coords[:, 1], cluster_coords[:, 2], s=2, c=[color])
+            ax.set_title(f"Cluster {label}", fontsize=10)
+            ax.axis('off')
+
+        plt.tight_layout()
+        save_path = self.output_dir / "kmenasdbscan_Results" / f"{filename_stem}_dbscan_allclusters_colored.png"
+        plt.savefig(save_path, dpi=300)
+        plt.close(fig)
 
 
-if __name__=="__main__":
-    # Example usage of the class
-  
-    fpath = readlistFiles(r'data\processed\main_fgdata','.npy').file_with_Path()
+
+if __name__ == "__main__":
+    
+    fpath = readlistFiles(r'data\processed\main_fgdata',
+                          '.npy').file_with_Path()
     fpathanyfile = Path(fpath[0])
-    datapath= fpathanyfile.parent
+    datapath = fpathanyfile.parent
     print(datapath)
     RES_DIR = Path.cwd()/"results"
-    kmeansdbscan_Results = Path(RES_DIR)/ "kmenasdbscan_Results"
+    kmeansdbscan_Results = Path(RES_DIR) / "kmenasdbscan_Results"
     # kmeansdbscan_Results = Path(kmeansdbscan_Results)
     relativeDataPath = r'data\processed\main_fgdata'
 
     test_instance = EnhancedClustering(datapath=datapath, output_dir=kmeansdbscan_Results,
-                                   relativeDataPath=relativeDataPath, filesuffix='.npy', THRESHOLD_VALUE=None, n_clusters=6)
-    
+                                       relativeDataPath=relativeDataPath, filesuffix='.npy', THRESHOLD_VALUE=None, n_clusters=6)
+
     # Run all methods in sequence on each file
     for filewithpath in test_instance.fpath:
-    
+
         filewithpath = Path(filewithpath)
         data = np.load(filewithpath)
-        print(f"\n File: {filewithpath.name} and \n stem:{filewithpath.stem} \n Data shape: {data.shape}")
+        print(
+            f"\n File: {filewithpath.name} and \n stem:{filewithpath.stem} \n Data shape: {data.shape}")
 
         # Run all methods in sequence on each file's data
         # Pass string path to load_volume to avoid Path/str issues with endswith
         volume = test_instance.load_volume(str(filewithpath))
-        features = test_instance.extract_features(volume)
-        kmeans_labels = test_instance.run_kmeans(features)
-        dbscan_labels = test_instance.run_dbscan_per_cluster(features, kmeans_labels)
-        test_instance.save_results(dbscan_labels,features[:, :3],fileFullpath=filewithpath)
+        feature_data = test_instance.extract_feature_data(volume)
+        kmeans_labels = test_instance.run_kmeans(feature_data)
+        dbscan_labels = test_instance.run_dbscan_per_cluster(
+            feature_data, kmeans_labels)
+        test_instance.save_results(
+            dbscan_labels, feature_data[:, :3], fileFullpath=filewithpath)
 
-        test_instance.plot_clusters(features[:, :3], dbscan_labels, title=f"{filewithpath.stem}")
+        test_instance.plot_clusters(
+            feature_data[:, :3], dbscan_labels, title=f"{filewithpath.stem}")
+        test_instance.plot_dbscan_clusters_subplot(feature_data[:, :3], dbscan_labels, filewithpath.stem)
 
 
 
@@ -254,9 +327,9 @@ if __name__=="__main__":
 
 # Example use:
 # volume = load_volume("yourfile.mat")
-# X = extract_features(volume)
-# X_scaled = StandardScaler().fit_transform(X)
-# kmeans_labels = run_kmeans(X_scaled, n_clusters=4)
-# final_labels = run_dbscan_per_cluster(X_scaled, kmeans_labels)
-# plot_clusters(X[:, :3], final_labels)
-# save_results("output_dir", final_labels, X[:, :3])
+# X = extract_feature_data(volume)
+# feature_data = StandardScaler().fit_transform(X)
+# kmeans_labels = run_kmeans(feature_data, n_clusters=4)
+# dbscan_final_labels = run_dbscan_per_cluster(feature_data, kmeans_labels)
+# plot_clusters(X[:, :3], dbscan_final_labels)
+# save_results("output_dir", dbscan_final_labels, X[:, :3])

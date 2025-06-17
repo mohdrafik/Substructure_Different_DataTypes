@@ -146,7 +146,7 @@ class EnhancedClustering:
     # def run_dbscan_per_cluster(self, feature_data, kmeans_labels, eps=0.06, min_samples=5):
 
     @logfunction
-    def run_dbscan_per_cluster(self, feature_data, kmeans_labels, DBonlyintensity = True):
+    def run_dbscan_per_cluster(self, feature_data, kmeans_labels, DBonlyintensity = False):
         dbscan_final_labels = -np.ones(len(feature_data), dtype=int) # array([-1, -1, -1, -1, -1 .......... ]) of size of featutr_data. 
         label_offset = 0
         for cluster_id in np.unique(kmeans_labels):
@@ -280,7 +280,7 @@ if __name__ == "__main__":
         dbscan_labels = test_instance.run_dbscan_per_cluster(
             feature_data, kmeans_labels)
         test_instance.save_results(
-            dbscan_labels, feature_data[:, :3], fileFullpath=filewithpath)
+            dbscan_labels, kmeans_labels, feature_data[:, :3], fileFullpath=filewithpath)
 
         test_instance.plot_clusters(
             feature_data[:, :3], dbscan_labels, title=f"{filewithpath.stem}")

@@ -70,7 +70,7 @@ for i = 1:length(mat_files)
             n = numel(unique_labels);
             cols = ceil(sqrt(n));
             rows = ceil(n / cols);
-            fig = figure('Color', 'w');
+            fig = figure('Color', 'k');% w
 
             for j = 1:n
                 cluster_id = unique_labels(j);
@@ -163,11 +163,11 @@ for i = 1:length(mat_files)
             end
         end
     catch ME
-        warning("❗ Could not process file %s due to error: %s", mat_path, ME.message);
+        warning(" Could not process file %s due to error: %s", mat_path, ME.message);
     end
 end
 
-fprintf('\n✅ All processing and visualizations complete.\n');
+fprintf('\n  All processing and visualizations complete.\n');
 end
 
 
@@ -269,7 +269,7 @@ end
 %     end
 % end
 % 
-% fprintf('\n✅ All cluster visualizations are complete.\n');
+% fprintf('\n  All cluster visualizations are complete.\n');
 % end
 
 

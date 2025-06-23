@@ -273,7 +273,7 @@ class BinWidthExplorer(DataPreprocessor):
                  alpha=0.6, color='skyblue', edgecolor='black')
         plt.plot(x, p, 'r--', label=f'Gaussian Fit\nμ={mu:.5f}, σ={std:.2e}')
         plt.legend()
-        plt.title(f"Gaussian Fit to Peak {key} ")
+        plt.title(f"Gaussian Fit to Peak {key} ", fontsize= 8, fontweight='bold')
         plt.xlabel("Value")
         plt.ylabel("Density")
         plt.grid(True, linestyle='--', alpha=0.5)

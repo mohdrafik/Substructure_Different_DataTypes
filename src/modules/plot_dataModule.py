@@ -6,7 +6,8 @@ import seaborn as sns
 from collections import Counter
 from pathlib import Path
 from matplotlib.patches import Patch
-
+from matplotlib.ticker import ScalarFormatter
+from scipy.stats import norm
 import open3d as o3d
 import imageio.v2 as imageio
 from skimage.filters import threshold_otsu
@@ -590,7 +591,142 @@ class DataPlotter:
     # @staticmethod
     # def QunatileBasedThrseholdingVisualization():
 
+    @staticmethod
+    @decoratorLog
+    def plot_Peak_and_histogram_researchplot(data, results_dir, filename = None, peaks_except_Highest=None, bins=None, singleColumnPlot = None,guassian_plot= True):
+        """
+        Plots histogram with peak detection and saves the plot.
+        Uses the instance's load_data method to load data.
+        """
+        # data = np.load(filename)
+        data = data
+        data = data.flatten()
+        if filename[-2:] =='8h':
+            data = data[data!=0]
+        else:
+            data = data[data > 0]
+        nbins = bins if bins is not None else 1000
+        counts, edges = np.histogram(data, bins=nbins)
 
+        def fit_guassain(peak_data,bins = None):
+
+            nbins = bins if bins is not None else 1000
+            x = np.linspace(np.min(peak_data),np.max(peak_data),nbins)
+            mu, std = norm.fit(peak_data)
+            p = norm.pdf(x, mu, std)
+            fitguassian = p 
+
+            return x,fitguassian,mu,std 
+        
+        Guassian_res = fit_guassain(peak_data=data, bins = nbins) # guassain polynomial.
+
+        peakCounts = np.max(counts)
+        ind_peakCounts = np.where(counts == peakCounts)[0]
+
+        peak_left_edge = edges[ind_peakCounts]
+        peak_right_edge = edges[ind_peakCounts + 1]
+
+        # Calculate equivalent count limit for y-axis
+        TotalValue_data = data.size
+        peak_val_Percentage = (peakCounts / TotalValue_data) * 100
+        remainingVal_percentage = 100 - peak_val_Percentage
+        if peaks_except_Highest is None or peaks_except_Highest == 0:
+            shared_averageValCount_percentage = 0
+        else:
+            shared_averageValCount_percentage = remainingVal_percentage / peaks_except_Highest
+
+        final_comparableCountLimit = peakCounts * shared_averageValCount_percentage / 100 if peaks_except_Highest else peakCounts
+
+        
+        if singleColumnPlot :       
+            # best for double column plot.
+            # Ideal for single-column research paper
+            # plt.figure(figsize=(3.6, 2.5))  # Ideal for single-column research paper
+            fig = plt.figure(figsize=(3.6, 2.5), facecolor='white')  # White background
+            ax = fig.add_subplot(111)
+            ax.set_facecolor('white')  # ensures white background inside plot area
+
+            if guassian_plot:
+                p = Guassian_res[1]
+                x = Guassian_res[0]
+                mu = Guassian_res[2]
+                std = Guassian_res[3]
+                TitleFile = filename
+                ax.plot(x, p, 'r--', label=f'Gaussian Fit\nμ={mu:.5f}, σ={std:.2e}')
+            else:
+                TitleFile = filename[:-4]
+
+            n, bins_hist, patches = ax.hist(data, bins=nbins, edgecolor='magenta', alpha=0.8, color='magenta', label='Histogram')
+            ax.set_xlabel('Values', fontsize=8)
+            ax.set_ylabel('Frequency', fontsize=8)
+            
+            ax.set_title(f'{TitleFile}', fontsize=8, fontweight='bold')
+            ax.grid(True, linestyle='--', linewidth=0.2, alpha=0.8, color='gray')  # light gray grid color
+
+            
+            # for bold ticklabels: 
+            # for tick in ax.xaxis.get_major_ticks():
+            #     tick.label.set_fontsize(7)
+            #     tick.label.set_fontweight('bold')
+
+            # for tick in ax.yaxis.get_major_ticks():
+            #     tick.label.set_fontsize(7)
+            #     tick.label.set_fontweight('bold')
+
+            # this is valid with plt.
+            # plt.xlabel(fontsize=7, fontweight='bold')
+            # plt.ylabel(fontsize=7, fontweight='bold')
+
+            # Set tick parameters for paper style
+            ax.tick_params(axis='both', labelsize = 7)
+            ax.set_ylim(0, final_comparableCountLimit)
+
+            # ax = plt.gca()
+            ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))  # scientific notation
+            # Add border/spine (BOX)
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_color('black')
+                spine.set_linewidth(0.8)
+
+            # Plot vertical lines and annotations at peak edges
+            for left, right in zip(peak_left_edge, peak_right_edge):
+                if filename[-6:-4] in ['8h', '4h']:
+                # if filename[-6:-4] == '8h' or filename[-6:-4] == '4h':
+                    y_position_text = final_comparableCountLimit - 1.2E4
+                    xtext_position = ((left+right+0.026)/2)
+                else:
+                    xtext_position = ((left+right+0.018)/2)
+                    y_position_text = final_comparableCountLimit - 190
+              
+                ax.axvline(left, color='red', linestyle='-', linewidth=1.2, label=f'Peak Left Edge: {left:.6f}')
+                ax.axvline(right, color='darkred', linestyle='-', linewidth=1.2, label=f'Peak Right Edge: {right:.6f}')
+
+                ax.annotate(f'Count: {peakCounts}', xy=(xtext_position, y_position_text), xytext=(0, 10),
+                            textcoords='offset points', ha='center', color='black', fontsize=5, fontweight='normal',
+                            bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+            # Clean up legend
+            # ax = plt.gca()
+            # handles, labels = ax.gca().get_legend_handles_labels()
+            handles, labels = ax.get_legend_handles_labels()
+            by_label = dict(zip(labels, handles))
+            ax.legend(by_label.values(), by_label.keys(), fontsize=5, loc='best', frameon=True)
+            # ax.legend(by_label.values(), by_label.keys(), fontsize=3)
+            plt.tight_layout()
+            save_dir = results_dir
+            save_dir.mkdir(parents=True, exist_ok=True)
+            clean_filename = filename.replace('.mat', '').replace('.npy', '')
+            # save_path = save_dir / f"{clean_filename}_histogram_peaks.eps"
+            save_path = save_dir / f"{clean_filename}_histogram_peaks.png"
+            plt.savefig(save_path, dpi=600, bbox_inches = 'tight', facecolor='white')
+            # plt.savefig(save_path, dpi=600)
+            print(f"Plot saved to: {save_path}")
+
+            plt.close()
+
+     
 
 if __name__ == "__main__":
 
@@ -623,6 +759,6 @@ if __name__ == "__main__":
         saveplot=False
     )
 
-# counts = np.array([      1,      20,     253,    2466,   25466,  257152, 2461352,  5670279, 1041250,   97875,   10690,     838])
-# values = [val for val in range(1, 13)]
-# significant_digit_data = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+        # counts = np.array([      1,      20,     253,    2466,   25466,  257152, 2461352,  5670279, 1041250,   97875,   10690,     838])
+        # values = [val for val in range(1, 13)]
+        # significant_digit_data = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])

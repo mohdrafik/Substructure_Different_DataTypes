@@ -3,7 +3,9 @@ import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
 from scipy.stats import norm
+from matplotlib.ticker import ScalarFormatter
 from pathlib import Path
+
 
 class HistogramAnalyzer:
     
@@ -86,8 +88,8 @@ class HistogramAnalyzer:
         print(f"normal histogram : {save_path}")
 
 
-   
-    def plot_Peak_and_histogram(self, filename, peaks_except_Highest=None, bins=None):
+     
+    def plot_Peak_and_histogram(self, filename, peaks_except_Highest=None, bins=None, singleColumnPlot = None):
         """
         Plots histogram with peak detection and saves the plot.
         Uses the instance's load_data method to load data.
@@ -119,39 +121,132 @@ class HistogramAnalyzer:
 
         final_comparableCountLimit = peakCounts * shared_averageValCount_percentage / 100 if peaks_except_Highest else peakCounts
 
-        plt.figure(figsize=(10, 6))
-        # plt.figure(figsize=(11.7, 8.3))
-        # figsize=(11.7, 8.3)
-        n, bins_hist, patches = plt.hist(data, bins=nbins, edgecolor='black', alpha=0.4, color='skyblue', label='Histogram')
-        plt.xlabel('Values', fontsize=14)
-        plt.ylabel('Frequency', fontsize=14)
-        plt.title(f'Histogram: {filename}', fontsize=14, fontweight='bold')
-        plt.grid(True, linestyle='--', linewidth=0.2, alpha=0.3)
+        
+        if singleColumnPlot :       
+            # best for double column plot.
+            # Ideal for single-column research paper
+            # plt.figure(figsize=(3.6, 2.5))  # Ideal for single-column research paper
+            fig = plt.figure(figsize=(3.6, 2.5), facecolor='white')  # White background
+            ax = fig.add_subplot(111)
+            ax.set_facecolor('white')  # ensures white background inside plot area
 
-        # Set tick parameters for research paper style
-        plt.xticks(fontsize=14)
-        plt.yticks(fontsize=14)
 
-        # Plot vertical lines at peak edges
-        for left, right in zip(peak_left_edge, peak_right_edge):
-            plt.axvline(left, color='darkred', linestyle='-', linewidth=2, label=f'Peak Left Edge: {left:.6f}')
-            plt.axvline(right, color='darkblue', linestyle='-', linewidth=2, label=f'Peak Right Edge: {right:.6f}')
-            plt.annotate(f'Count: {peakCounts}', xy=((left+right)/2, final_comparableCountLimit-150), xytext=(0, 10),
-                textcoords='offset points', ha='center', color='black', fontsize=12, fontweight='bold',
-                bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+            n, bins_hist, patches = ax.hist(data, bins=nbins, edgecolor='magenta', alpha=0.8, color='magenta', label='Histogram')
+            ax.set_xlabel('Values', fontsize=8)
+            ax.set_ylabel('Frequency', fontsize=8)
+            ax.set_title(f'{filename[:-4]}', fontsize=8, fontweight='bold')
+            ax.grid(True, linestyle='--', linewidth=0.2, alpha=0.8, color='gray')  # light gray grid color
 
-        handles, labels = plt.gca().get_legend_handles_labels()
-        by_label = dict(zip(labels, handles))
-        plt.legend(by_label.values(), by_label.keys(), fontsize=12)
+            
+            # for bold ticklabels: 
+            # for tick in ax.xaxis.get_major_ticks():
+            #     tick.label.set_fontsize(7)
+            #     tick.label.set_fontweight('bold')
 
-        plt.ylim(0, final_comparableCountLimit)
+            # for tick in ax.yaxis.get_major_ticks():
+            #     tick.label.set_fontsize(7)
+            #     tick.label.set_fontweight('bold')
+
+            # this is valid with plt.
+            # plt.xlabel(fontsize=7, fontweight='bold')
+            # plt.ylabel(fontsize=7, fontweight='bold')
+
+            # Set tick parameters for paper style
+            ax.tick_params(axis='both', labelsize = 7)
+            ax.set_ylim(0, final_comparableCountLimit)
+
+            # ax = plt.gca()
+            ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))  # scientific notation
+            # Add border/spine (BOX)
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+                spine.set_color('black')
+                spine.set_linewidth(0.8)
+
+            # Plot vertical lines and annotations at peak edges
+            for left, right in zip(peak_left_edge, peak_right_edge):
+                if filename[-6:-4] in ['8h', '4h']:
+                # if filename[-6:-4] == '8h' or filename[-6:-4] == '4h':
+                    y_position_text = final_comparableCountLimit - 1.2E4
+                    xtext_position = ((left+right+0.026)/2)
+                else:
+                    xtext_position = ((left+right+0.018)/2)
+                    y_position_text = final_comparableCountLimit - 190
+              
+                ax.axvline(left, color='red', linestyle='-', linewidth=1.2, label=f'Peak Left Edge: {left:.6f}')
+                ax.axvline(right, color='darkred', linestyle='-', linewidth=1.2, label=f'Peak Right Edge: {right:.6f}')
+
+                ax.annotate(f'Count: {peakCounts}', xy=(xtext_position, y_position_text), xytext=(0, 10),
+                            textcoords='offset points', ha='center', color='black', fontsize=5, fontweight='normal',
+                            bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+            # Clean up legend
+            # ax = plt.gca()
+            # handles, labels = ax.gca().get_legend_handles_labels()
+            handles, labels = ax.get_legend_handles_labels()
+            by_label = dict(zip(labels, handles))
+            ax.legend(by_label.values(), by_label.keys(), fontsize=5, loc='best', frameon=True)
+            # ax.legend(by_label.values(), by_label.keys(), fontsize=3)
+           
+
+
+
+        else:
+            # best for A4 size plot in full width.
+            plt.figure(figsize=(11.7, 8.3))
+            n, bins_hist, patches = plt.hist(data, bins=nbins, edgecolor='black', alpha=0.4, color='skyblue', label='Histogram')
+            plt.xlabel('Values', fontsize=14)
+            plt.ylabel('Frequency', fontsize=14)
+            plt.title(f'Histogram: {filename[:-4]}', fontsize=16, fontweight='bold')
+            plt.grid(True, linestyle='--', linewidth=1, alpha=0.5)
+
+            # Set tick parameters for research paper style
+            plt.xticks(fontsize=14,fontweight='bold')
+            plt.yticks(fontsize=14,fontweight='bold')
+            plt.ylim(0, final_comparableCountLimit)
+            # Format y-axis in scientific notation
+        
+
+
+            # Plot vertical lines at peak edges
+            for left, right in zip(peak_left_edge, peak_right_edge):
+
+                if filename[-6:-4] == '8h' or filename[-6:-4] == '4h':
+                # if filename[-6:-4] in ['8h', '4h']:
+                    y_position_text = final_comparableCountLimit - 0.5E4
+                    xtext_position = ((left+right+0.01)/2)
+                else:
+                    xtext_position = ((left+right+0.009)/2)
+                    y_position_text = final_comparableCountLimit - 140
+            
+            
+                plt.axvline(left, color='darkred', linestyle='-', linewidth=2, label=f'Peak Left Edge: {left:.6f}')
+                plt.axvline(right, color='darkblue', linestyle='-', linewidth=2, label=f'Peak Right Edge: {right:.6f}')
+
+                plt.annotate(f'Count: {peakCounts}', xy = (xtext_position, y_position_text), xytext=(0, 10),
+                    textcoords='offset points', ha='center', color='black', fontsize=12, fontweight='bold',
+                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+            handles, labels = plt.gca().get_legend_handles_labels()
+            by_label = dict(zip(labels, handles))
+
+            ax =plt.gca()
+            ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))  # force scientific notation
+
+            plt.legend(by_label.values(), by_label.keys(), fontsize=12)
+            plt.tight_layout()
+
+        
         plt.tight_layout()
-
         save_dir = self.results_dir
         save_dir.mkdir(parents=True, exist_ok=True)
         clean_filename = filename.replace('.mat', '').replace('.npy', '')
+        # save_path = save_dir / f"{clean_filename}_histogram_peaks.eps"
         save_path = save_dir / f"{clean_filename}_histogram_peaks.png"
-        plt.savefig(save_path, dpi=300)
+        plt.savefig(save_path, dpi=600, bbox_inches = 'tight', facecolor='white')
+        # plt.savefig(save_path, dpi=600)
         print(f"Plot saved to: {save_path}")
 
         plt.close()
@@ -171,8 +266,23 @@ class HistogramAnalyzer:
 if __name__ == "__main__":
     base_dir = input("Enter the base_dir to your .npy or .mat files: ")
 
-    analyzer = HistogramAnalyzer(base_dir)
-    # analyzer.process_all_files(fit_gaussian = False)
+    BASE_DIR = base_dir
+    # from hist_seginoneplot import HistogramAnalyzer
+    hist = HistogramAnalyzer(BASE_DIR, bins = None)
+
+    for file in hist.files:
+        print(file)
+        hist.load_data(file)
+        if file[-6:-4] == '4h':
+            hist.plot_Peak_and_histogram(filename=file, peaks_except_Highest = 50, bins = 900, singleColumnPlot=True)
+        elif file[-6:-4] =='8h':
+            hist.plot_Peak_and_histogram(filename=file, peaks_except_Highest = 1, bins = 900,singleColumnPlot=True)
+        else:
+            hist.plot_Peak_and_histogram(filename=file, peaks_except_Highest = 100, bins = 900, singleColumnPlot= True)
+
+        # if file[-6:-4] in ['4h','8h']:
+        #     hist.plot_Peak_and_histogram(filename=file, peaks_except_Highest = 1, bins = 900)
+    print(f"All files processed succesfully -----------> ")
 
 
 #     def plot_Peak_histogram(data, filename = None, peaks_except_Highest = 4, binning_method = None):

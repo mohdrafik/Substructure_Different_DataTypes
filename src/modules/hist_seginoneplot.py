@@ -9,11 +9,21 @@ from pathlib import Path
 
 class HistogramAnalyzer:
     
-    def __init__(self,base_dir, bins = 'fd'):
+    def __init__(self, base_dir, relative_datapath_wrto_basedir = None, relative_resultpath_wrto_basedir = None, bins = 'fd'):
+        
         self.base_dir = Path(base_dir)
-        self.results_dir = self.base_dir / "results" / "hist_peakDetect_plot"
-        self.data_dir = self.base_dir/"data"/"raw_npyData"
+
+        self.relative_datapath_wrto_basedir = relative_datapath_wrto_basedir
+
+        self.relative_resultpath_wrto_basedir = relative_resultpath_wrto_basedir
+
+
+        self.data_dir = self.base_dir/"data"/"raw_npyData" if relative_datapath_wrto_basedir is None else self.base_dir/ self.relative_datapath_wrto_basedir
+
+        self.results_dir = self.base_dir / "results" / "hist_peakDetect_plot" if relative_resultpath_wrto_basedir is None else self.base_dir/ self.relative_resultpath_wrto_basedir
+
         self.results_dir.mkdir(parents=True, exist_ok=True)
+
         self.files = [f for f in os.listdir(self.data_dir) if f.endswith('.mat') or f.endswith('.npy')]
         print(f"Number of data files found: {len(self.files)}")
     
@@ -89,10 +99,28 @@ class HistogramAnalyzer:
 
 
      
-    def plot_Peak_and_histogram(self, filename, peaks_except_Highest=None, bins=None, singleColumnPlot = None):
+    def plot_Peak_and_histogram(self, filename, save_plot = None, peaks_except_Highest=None, bins=None, singleColumnPlot = None):
         """
-        Plots histogram with peak detection and saves the plot.
-        Uses the instance's load_data method to load data.
+        Plots histogram with peak detection and other part histogram 
+        it automatically adjust the ylim([0, final_comparableCountLimit]), so we can see the whole data histogram clearly without missing the information of low counts.
+        it automatically: first detect peak using counts,edges = np.histogram(data,bins), use bins defaults or use any traditional 'fd', .... then it will 
+        % of peaks counts = (peakcounts/wholedataCounts)*100;  see below:
+        <---- Calculate equivalent count limit for y-axis ----->
+        TotalValue_data = data.size
+        peak_val_Percentage = (peakCounts / TotalValue_data) * 100
+        remainingVal_percentage = 100 - peak_val_Percentage --> it'say that rest values is in reaminingVal_percentage. now let's say we have 5 other samll peak compare to the highest peak.
+        then reaminingVal_percentage divided into 5 parts approximately then -> peaks_except_Highest = 5 else None ( This means --> This is only peaks in given data. -> no need to equalize)
+        otherwise -->: shared_averageValCount_percentage = remainingVal_percentage / peaks_except_Highest
+        final ylim --> take shared_averageValCount_percentage % of PeakCounts => peakCounts * shared_averageValCount_percentage / 100  ->it work well. but further more put peak_except_Highest = 10,100..
+        -->Another things if singleColumnPlot = True -> then produce IEEE standard plot.if not plot A4 size plot and save these plot.
+         Uses the instance's load_data method to load data.
+
+        Args:
+            - filename which comes from loop of hist = HistogramAnalyzer(); for file in hist.files; filename = file.
+            - peak_except_Highest = 10,100, peaks other then highest peak
+            - bins = None -->  1000 or give any value
+            - singleColumnPlot if True else: A4 size plot. 
+
         """
         data = self.load_data(filename)
         data = data.flatten()
@@ -161,7 +189,7 @@ class HistogramAnalyzer:
             # Add border/spine (BOX)
             for spine in ax.spines.values():
                 spine.set_visible(True)
-                spine.set_color('black')
+                spine.set_color('gray') # black
                 spine.set_linewidth(0.8)
 
             # Plot vertical lines and annotations at peak edges
@@ -178,7 +206,7 @@ class HistogramAnalyzer:
                 ax.axvline(right, color='darkred', linestyle='-', linewidth=1.2, label=f'Peak Right Edge: {right:.6f}')
 
                 ax.annotate(f'Count: {peakCounts}', xy=(xtext_position, y_position_text), xytext=(0, 10),
-                            textcoords='offset points', ha='center', color='black', fontsize=5, fontweight='normal',
+                            textcoords='offset points', ha='center', color='black', fontsize=8, fontweight='normal', # fontsize=5
                             bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
 
             # Clean up legend
@@ -186,9 +214,9 @@ class HistogramAnalyzer:
             # handles, labels = ax.gca().get_legend_handles_labels()
             handles, labels = ax.get_legend_handles_labels()
             by_label = dict(zip(labels, handles))
-            ax.legend(by_label.values(), by_label.keys(), fontsize=5, loc='best', frameon=True)
-            # ax.legend(by_label.values(), by_label.keys(), fontsize=3)
-           
+            ax.legend(by_label.values(), by_label.keys(), fontsize=6, loc='best', frameon=True)
+            # ax.legend(by_label.values(), by_label.keys(), fontsize=5)
+            plt.show()
 
 
 
@@ -240,15 +268,17 @@ class HistogramAnalyzer:
 
         
         plt.tight_layout()
-        save_dir = self.results_dir
-        save_dir.mkdir(parents=True, exist_ok=True)
-        clean_filename = filename.replace('.mat', '').replace('.npy', '')
-        # save_path = save_dir / f"{clean_filename}_histogram_peaks.eps"
-        save_path = save_dir / f"{clean_filename}_histogram_peaks.png"
-        plt.savefig(save_path, dpi=600, bbox_inches = 'tight', facecolor='white')
-        # plt.savefig(save_path, dpi=600)
-        print(f"Plot saved to: {save_path}")
 
+        if save_plot is not None:
+            save_dir = self.results_dir
+            save_dir.mkdir(parents=True, exist_ok=True)
+            clean_filename = filename.replace('.mat', '').replace('.npy', '')
+            # save_path = save_dir / f"{clean_filename}_histogram_peaks.eps"
+            save_path = save_dir / f"{clean_filename}_histogram_peaks.png"
+            plt.savefig(save_path, dpi=600, bbox_inches = 'tight', facecolor='white')
+            # plt.savefig(save_path, dpi=600)
+            print(f"Plot saved to: {save_path}")
+        plt.show()
         plt.close()
 
 
@@ -266,19 +296,20 @@ class HistogramAnalyzer:
 if __name__ == "__main__":
     base_dir = input("Enter the base_dir to your .npy or .mat files: ")
 
-    BASE_DIR = base_dir
+    BASE_DIR = Path(base_dir)
+    print(f"Base_dir : -> {BASE_DIR}")
     # from hist_seginoneplot import HistogramAnalyzer
-    hist = HistogramAnalyzer(BASE_DIR, bins = None)
+    hist = HistogramAnalyzer(BASE_DIR,relative_datapath_wrto_basedir=None,relative_resultpath_wrto_basedir=None, bins = None)
 
     for file in hist.files:
         print(file)
         hist.load_data(file)
         if file[-6:-4] == '4h':
-            hist.plot_Peak_and_histogram(filename=file, peaks_except_Highest = 50, bins = 900, singleColumnPlot=True)
+            hist.plot_Peak_and_histogram(filename=file,save_plot=None, peaks_except_Highest = 50, bins = 900, singleColumnPlot=True)
         elif file[-6:-4] =='8h':
-            hist.plot_Peak_and_histogram(filename=file, peaks_except_Highest = 1, bins = 900,singleColumnPlot=True)
+            hist.plot_Peak_and_histogram(filename=file,save_plot=None, peaks_except_Highest = 1, bins = 900,singleColumnPlot=True)
         else:
-            hist.plot_Peak_and_histogram(filename=file, peaks_except_Highest = 100, bins = 900, singleColumnPlot= True)
+            hist.plot_Peak_and_histogram(filename=file, save_plot=None, peaks_except_Highest = 100, bins = 900, singleColumnPlot= True)
 
         # if file[-6:-4] in ['4h','8h']:
         #     hist.plot_Peak_and_histogram(filename=file, peaks_except_Highest = 1, bins = 900)

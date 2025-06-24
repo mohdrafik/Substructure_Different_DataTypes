@@ -483,7 +483,7 @@ class DataPlotter:
 
         print(f"All plots completed in {time.time() - t_start:.2f} seconds.")
 
-################################################################################################################# does not working  on cnr computer.
+################################################################################################################# is not working  on cnr computer.
     @staticmethod
     def visualize_and_export_3d_mesh(fg_mask, data, smoothing=None, title=None,
                                      save_obj_path=None,

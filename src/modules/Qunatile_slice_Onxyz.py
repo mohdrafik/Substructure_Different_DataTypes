@@ -158,7 +158,7 @@ class FeatureQuantileThresholding:
 
 
     
-    def visualize_all_views(self, data, filename, QunantileThresV, save_plot=False, durationplotshow = None, num_slices = None, figsize=(7, 5), dpi=300):
+    def visualize_all_views(self, data, filename, QunantileThresV, save_plot=None, durationplotshow = None, num_slices = None, figsize=None, dpi=300):
         
         """
         Visualize axial, coronal, and sagittal slices of a 3D data side-by-side in IEEE paper format.
@@ -189,36 +189,54 @@ class FeatureQuantileThresholding:
         slice_index_z = list(range(step_z, z_dim-step_z, step_z))[:num_slices] # why x_dim - step_x -->  because idx_x,starts, from step_x,2*step_x,3*step_x...
         print(f"size of x,y,z slices Total:{len(slice_index_x)} ,{len(slice_index_y)},{len(slice_index_z)} \n")
 
+        # IEEE double column width is typically about 7.16 inches (18.2 cm).
+        # For a 2x2 subplot, a good aspect ratio is width:height = 7:5 or 7:4.5.
+        # We'll use figsize=(7.16, 5) for best fit to IEEE double column.
+        if figsize is None:
+            figsize = (7.16, 5)  # Override to IEEE double column width
+
         for idx, (x_index, y_index, z_index) in enumerate(zip(slice_index_x, slice_index_y, slice_index_z)):
             # Extract slices
             print(f"idx: {idx}, x_index: {x_index}, y_index: {y_index}, z_index: {z_index}")
-            sagittal_slice = volume[x_index, :, :]
-            coronal_slice = volume[:, y_index, :]
-            axial_slice = volume[:, :, z_index]
+            # Original slices
+            sagittal_slice_orig = data[x_index, :, :]
+            coronal_slice_orig = data[:, y_index, :]
+            axial_slice_orig = data[:, :, z_index]
+            # Thresholded (binary) slices
+            sagittal_slice_thres = volume[x_index, :, :]
+            coronal_slice_thres = volume[:, y_index, :]
+            axial_slice_thres = volume[:, :, z_index]
 
             # Create figure
-            fig, ax = plt.subplots(2, 2, figsize=figsize)
+            fig, axes = plt.subplots(2, 2, figsize=figsize, dpi=dpi)
 
-            ax[0, 0].imshow(data[:, :, z_index], cmap='gray')
-            ax[0, 0].set_title(f"Original Slice@ z={z_index} Q={QunantileThresV:.2f}", fontsize=9)
-            ax[0, 1].imshow(axial_slice.T, cmap="gray", origin="lower")
-            ax[0, 1].set_title(f"Axial View Qth:{QunantileThresV:.2f}", fontsize=9)
-            ax[1, 0].imshow(coronal_slice.T, cmap="gray", origin="lower")
-            ax[1, 0].set_title(f"Coronal View Qth:{QunantileThresV:.2f}", fontsize=9)
-            ax[1, 1].imshow(sagittal_slice.T, cmap="gray", origin="lower")
-            ax[1, 1].set_title(f"Sagittal View Qth:{QunantileThresV:.2f}", fontsize=9)
+            # Top-left: Original Axial
+            axes[0, 0].imshow(axial_slice_orig, cmap='gray', origin='lower')
+            axes[0, 0].set_title(f"Original Axial z={z_index}", fontsize=9)
 
-            for ax in ax.flat:
-                ax.axis("off")
+            # Top-right: Thresholded Axial
+            axes[0, 1].imshow(axial_slice_thres, cmap='hot', origin='lower')
+            axes[0, 1].set_title(f"Thres Axial z={z_index}", fontsize=9)
 
-            fig.suptitle(f"{filename} QunatilePercentile:{self.QuantilePercentile:.2f} (Slice {idx+1})", fontsize=10)
+            # Bottom-left: Thresholded Coronal
+            axes[1, 0].imshow(coronal_slice_thres.T, cmap='hot', origin='lower')
+            axes[1, 0].set_title(f"Thres Coronal y={y_index}", fontsize=9)
+
+            # Bottom-right: Thresholded Sagittal
+            axes[1, 1].imshow(sagittal_slice_thres.T, cmap='hot', origin='lower')
+            axes[1, 1].set_title(f"Thres Sagittal x={x_index}", fontsize=9)
+
+            for ax_ in axes.flat:
+                ax_.axis("off")
+
+            fig.suptitle(f"{filename[:-4]} Q={self.QuantilePercentile:.2f} Qth:{QunantileThresV:.3f} (Slice {idx+1})", fontsize=10)
             plt.tight_layout(pad=1.0)
 
             # Save image before closing
             if save_plot:
-                save_dirxyzSlice = self.save_res_plot / "saveSlicexyzFixQ"
+                save_dirxyzSlice = self.save_res_plot / "saveallSlicexyzFixQ"
                 os.makedirs(save_dirxyzSlice, exist_ok=True)
-                save_path = os.path.join(save_dirxyzSlice, f"{filename}_slice{z_index}_numslice{idx+1}allviews.png")
+                save_path = os.path.join(save_dirxyzSlice, f"{filename[:-4]}_slice{z_index}_numslice{idx+1}allviews.png")
                 fig.savefig(save_path, dpi=dpi, bbox_inches='tight')
 
             plt.show(block=False)
@@ -318,7 +336,7 @@ if __name__ =="__main__":
 
         ft.QuantilePercentile = QuantileP_EachFile[filename[:-4]]/100
        
-        print(f"filename : which is current in process:{filename} and \n old | new QunatileP :{old_QunatileP, ft.QuantilePercentile}")
+        print(f"filename : which is current in process:{filename} and \n previous | updated QunatileP :{old_QunatileP, ft.QuantilePercentile}")
         data  = ft.load_data(filewithpath)
         
         mean_val, std_dev, QuantileThres = ft.extract_features(data)
@@ -327,7 +345,7 @@ if __name__ =="__main__":
         # ft.visualize_thresholds(filename,data,QunatileThres=QunatilethresValue,save_plot=True)
         # ft.visualize_thresholds_slice_dynamic(filename,data,QunatileThres = QunatilethresValue,save_plot=True,num_slices=3)
         
-        ft.visualize_all_views(data, filename, QunantileThresV=QunatilethresValue,num_slices=7)
+        ft.visualize_all_views(data, filename, QunantileThresV=QunatilethresValue, save_plot= True, num_slices=5)
     
 
 

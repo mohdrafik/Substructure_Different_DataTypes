@@ -393,7 +393,7 @@ class DataPlotter:
 
 #################################################################################################################
     @staticmethod
-    def plot_horizontal_split_histogram(significant_digit_data, title=None, xlabel=None, ylabel=None, saveplot=False, filename=None, save_dir=None, dpi=600):
+    def plot_horizontal_split_histogram(significant_digit_data, title=None, xlabel=None, ylabel=None, saveplot=None, filename=None, save_dir=None, dpi=600):
         """
         here significant_digit_data is a list of significant digits in my data values, this is counted and plot as horizontal split histogram 
         Plot a horizontal histogram with bars color-coded by frequency level:
@@ -429,24 +429,44 @@ class DataPlotter:
             else:
                 colors.append("salmon")
 
-        sns.set(style="whitegrid", font_scale=1.1, rc={
-            'axes.labelsize': 11,
-            'axes.titlesize': 13,
-            'xtick.labelsize': 10,
-            'ytick.labelsize': 10,
+        # IEEE double column: width ~3.5in, height ~2.5in, font 7-8pt
+        plt.rcParams.update({
+            'font.size': 7,
+            'axes.labelsize': 8,
+            'axes.titlesize': 8,
+            'xtick.labelsize': 7,
+            'ytick.labelsize': 7,
+            'legend.fontsize': 7,
             'font.family': 'serif'
         })
 
-        fig, ax = plt.subplots(figsize=(10, 6))
-        bars = ax.barh(digits, counts, color=colors, edgecolor='black', height=0.7)
+        fig, ax = plt.subplots(figsize=(3.5, 2.5))
+        bars = ax.barh(digits, counts, color=colors, edgecolor='black', height=0.6)
 
-        for d, c in zip(digits, counts):
-            ax.text(c + max(counts)*0.01, d, f"{c}", va='center', fontsize=9)
+        # Only annotate the maximum bar (inside the bar)
+        max_idx = np.argmax(counts)
+        ax.text(
+            counts[max_idx] * 0.5,  # halfway inside the bar
+            digits[max_idx],
+            f"{counts[max_idx]}",
+            va='center',
+            ha='center',
+            fontsize=7,
+            color='black',
+            fontweight='bold'
+        )
 
-        ax.set_title(title if title else "Horizontal Histogram", pad=10)
-        ax.set_xlabel(xlabel if xlabel else "Count", labelpad=6)
-        ax.set_ylabel(ylabel if ylabel else "Significant Digit", labelpad=6)
+        ax.set_title(title if title else "Horizontal Histogram", pad=4, fontsize=8, fontweight='bold')
+        ax.set_xlabel(xlabel if xlabel else "Count", labelpad=2, fontsize=8)
+        ax.set_ylabel(ylabel if ylabel else "Significant Digit", labelpad=2, fontsize=8)
         ax.set_yticks(digits)
+        ax.tick_params(axis='both', which='major', length=3, width=0.7)
+
+        # Make spines visible and thin
+        for spine in ax.spines.values():
+            spine.set_visible(True)
+            spine.set_linewidth(0.7)
+            spine.set_color('black')
 
         legend_elements = [
             Patch(facecolor='darkred', edgecolor='black', label='Very Low'),
@@ -454,15 +474,16 @@ class DataPlotter:
             Patch(facecolor='gold', edgecolor='black', label='Moderate'),
             Patch(facecolor='salmon', edgecolor='black', label='High')
         ]
-        ax.legend(handles=legend_elements, title="Frequency Level", loc='best')
+        ax.legend(handles=legend_elements, title="Frequency Level", loc='best', frameon=True, fontsize=6, title_fontsize=7)
 
-        plt.tight_layout()
+        ax.grid(axis='x', linestyle='--', linewidth=0.3, alpha=0.7)
+        plt.tight_layout(pad=0.5)
 
-        if saveplot:
+        if saveplot is not None:
             if filename and save_dir:
                 os.makedirs(save_dir, exist_ok=True)
                 save_path = os.path.join(save_dir, f"{filename}_horizontal_histogram.png")
-                plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
+                plt.savefig(save_path, dpi=dpi, bbox_inches='tight', transparent=True)
                 print(f" Plot saved at: {save_path}")
             else:
                 print(" Cannot save: provide both filename and save_dir.")
@@ -470,6 +491,7 @@ class DataPlotter:
             print("Plot not saved (saveplot=False).")
 
         plt.show()
+
 
     def run_all(self, complex_plot=False):
         print(f"Found {len(self.files)} .npy files.")

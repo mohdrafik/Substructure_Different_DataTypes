@@ -248,9 +248,6 @@ class FeatureQuantileThresholding:
 
    
 
-
-
-
     # def process(self, visualize=True, save_features=True):
     #     for filename in self.filewithpath:
     #         data = self.load_data(filename)

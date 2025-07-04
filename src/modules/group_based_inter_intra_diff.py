@@ -11,10 +11,8 @@ sys.path.append(
 )
 
 from path_manager import addpath
-
 addpath()
 from listspecificfiles import readlistFiles
-
 
 class GroupingBasedDistance:
     def __init__(self, rel_datapath, data_path=None, output=None, file_suffix=None):
@@ -41,10 +39,10 @@ class GroupingBasedDistance:
         return df1
 
     def plot_sharp_gradient_changes(self, arr, gradient_threshold=0.01):
+        
         """
         Compute the gradient of the input array, detect sharp rises,
         and plot them along with the original data.
-
         Parameters:
         -----------
         arr : array-like
@@ -103,7 +101,6 @@ class GroupingBasedDistance:
     def save_plot(self, plot_save_path=None, Title=None, filename=None, pdfsave=None):
         """
         To save the plot produce for each file:
-
         args:
         plot_save_path : str -> only , it will work as child after  results/ 'plot_save_path'
         Title of each plot: filename[:-12] after removing the mask...
@@ -270,8 +267,6 @@ class GroupingBasedDistance:
 
         gradients = np.gradient(data)  # first derivative
 
-
-        
 
         double_gradients = np.gradient(gradients)  # second derivative
        

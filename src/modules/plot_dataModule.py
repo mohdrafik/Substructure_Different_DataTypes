@@ -748,6 +748,82 @@ class DataPlotter:
 
             plt.close()
 
+    @staticmethod
+    @decoratorLog
+    def plot_data_researchformat(x, y, 
+                  xlabel='X-axis', ylabel='Y-axis', title='',
+                  figsize=(3.5, 2.5), # IEEE single-column
+                  dpi=600,
+                  line_style='-', line_width=1.0, color='blue',
+                  marker=None, markersize=3,
+                  grid=True, legend_label=None, 
+                  save_path=None, tight=True, xticks=None, yticks=None):
+        
+        """
+        Instance method to plot x vs y data in IEEE-friendly format.
+
+        Parameters:
+        -----------
+        x, y : arrays or lists
+            Data to plot.
+        xlabel, ylabel, title : str
+            Axis labels and title.
+        figsize : tuple
+            Figure size in inches. (IEEE single column ~3.5, double ~7.2)
+        dpi : int
+            Resolution for saving figure.
+        line_style, line_width, color : plot style
+        marker, markersize : markers
+        grid : bool
+            Show grid or not.
+        legend_label : str
+            Label for legend.
+        save_path : str or None
+            If given, saves figure to this path.
+        tight : bool
+            Whether to use tight_layout().
+        """
+
+        plt.figure(figsize=figsize, dpi=dpi)
+        plt.plot(x, y, linestyle=line_style, linewidth=line_width,
+                 color=color, marker=marker, markersize=markersize,
+                 label=legend_label)
+        
+        plt.xlabel(xlabel, fontsize=8)
+        plt.ylabel(ylabel, fontsize=8)
+
+        # Force scientific notation on x-axis
+        if xticks is not None:
+            ax = plt.gca()
+            ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+
+        if yticks is not None:
+            ax = plt.gca()
+            ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))    
+
+        
+
+
+        plt.title(title, fontsize=9)
+        plt.tick_params(axis='both', which='major', labelsize=7)
+
+        if grid:
+            plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.3)
+
+        if legend_label:
+            plt.legend(fontsize=7)
+
+        if tight:
+            plt.tight_layout()
+
+        if save_path:
+            plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
+            print(f"Figure saved at: {save_path}")
+        
+        plt.show()
+
      
 
 if __name__ == "__main__":

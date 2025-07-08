@@ -34,7 +34,8 @@ def logfunction(func):
 
 class EnhancedClustering:
 
-    def __init__(self, datapath, output_dir, relativeDataPath, filesuffix=None, intensityBased_Kmeans=True, THRESHOLD_VALUE=False, n_clusters=None, eps_extractedFromData=None, min_samples_loadFromData=None):
+    def __init__(self, relativeDataPath, output_dir= None, datapath=None, filesuffix=None, intensityBased_Kmeans=True, THRESHOLD_VALUE=False, n_clusters=None, eps_extractedFromData=None, min_samples_loadFromData=None):
+
         """ 
         it will use dteh both kmeans and dbscan to cluster the data
         Args:
@@ -47,8 +48,8 @@ class EnhancedClustering:
             eps_extractedFromData  (bool, optional): Load epsilon value from JSON. Defaults to False.
             min_samples_loadFromData  (bool, optional): Load min_samples value from JSON. Defaults to False.
         """
-        self.datapath = Path(datapath)
-        self.output_dir = Path(output_dir)
+        self.datapath = Path(datapath) if datapath is not None else Path.cwd()/relativeDataPath
+        self.output_dir = Path(output_dir) if output_dir is not None else Path.cwd().parent/"results"/"kmenasdbscan_Results"/ "kmeans_result_Intensityonly"
         self.THRESHOLD_VALUE = THRESHOLD_VALUE
         self.n_clusters = n_clusters if n_clusters is not None else 6
         self.relativeDataPath = relativeDataPath
@@ -66,10 +67,14 @@ class EnhancedClustering:
 
     @logfunction
     def load_volume(self, filepath):
-        if filepath.endswith('.npy'):
+        filepath = Path(filepath)
+
+        filename = filepath.name
+
+        if filename.endswith('.npy'):
             volume = np.load(filepath)
 
-        elif filepath.endswith('.mat'):
+        elif filename.endswith('.mat'):
             mat = sio.loadmat(filepath)
             # Assuming your volume variable is named 'volume' in .mat
             volume = next(v for v in mat.values() if isinstance(
@@ -92,17 +97,28 @@ class EnhancedClustering:
     @logfunction
     def extract_feature_data(self, volume, onlyPositiveValues=False, Nonzeros=True):
         # coordinates of non-zero/mainData/foreground/signal values, output will be -->  [z1,x1,y1]
-        coords = np.array(np.nonzero(volume)).T
+
+        if  onlyPositiveValues and Nonzeros:
+            raise ValueError(
+                "onlyPositiveValues and Nonzeros cannot be both True. Choose one of them.")
 
         if onlyPositiveValues:
             intensities = volume[volume > 0].flatten().reshape(-1, 1)
+            coords = np.where(volume > 0)  # coordinates of non-zero values
+            coords = np.array(coords).T  # transpose to get shape (N, 3)
         elif Nonzeros:
             intensities = volume[volume != 0].flatten().reshape(-1, 1)
+            coords = np.where(volume != 0)  # coordinates of non-zero values
+            coords = np.array(coords).T  # transpose to get shape (N, 3)
         else:
             intensities = volume.flatten().reshape(-1, 1)
+            coords = np.where(np.isfinite(volume))  # coordinates of finite values
+            coords = np.array(coords).T  # transpose to get shape (N, 3)
 
         # return like this [0,1,2, 1.334]
-        return np.hstack((coords, intensities))
+        coords_and_intensities_both = np.hstack((coords, intensities))
+
+        return  coords, coords_and_intensities_both
 
     @logfunction
     def run_kmeans(self, All_extracted_faetureData, scaling=False, intensityFeature_only=True, allFeatures=False):
@@ -183,33 +199,40 @@ class EnhancedClustering:
         return dbscan_final_labels
 
     @logfunction
-    def save_results(self, dbscan_final_labels, kmeans_labels, coords, fileFullpath):
+    def save_results(self, dbscan_final_labels= None, kmeans_labels= None, coords = None, fileFullpath = None,saveallseginonedir=None):
 
         # os.makedirs(self.output_dir, exist_ok=True)
         # np.save(os.path.join(self.output_dir, "cluster_labels.npy"), dbscan_final_labels)
         # sio.savemat(os.path.join(self.output_dir,
         #             "cluster_labels.mat"), {"labels": dbscan_final_labels})
         # np.save(os.path.join(self.output_dir, "voxel_coords.npy"), coords)
-
-        fullFilepath = Path(fileFullpath)
-        kdb_coords_with_final_labels = np.hstack((coords, dbscan_final_labels.reshape(-1, 1)))  # [x, y, z, dbscan_final_labels]
-        output_dir_db = self.output_dir/ f"coord_dbfinal_Labels_{fullFilepath.stem}"
-        output_dir_db.mkdir(parents=True, exist_ok=True)
-        kmeans_dbres = output_dir_db/f"dbfinal{fullFilepath.stem}"
-        np.save(f"{kmeans_dbres}.npy", kdb_coords_with_final_labels)  # save .npy
-        sio.savemat(f"{kmeans_dbres}.mat", {"labels": kdb_coords_with_final_labels})  # save .mat
+        if dbscan_final_labels is not None:
+            fullFilepath = Path(fileFullpath)
+            kdb_coords_with_final_labels = np.hstack((coords, dbscan_final_labels.reshape(-1, 1)))  # [x, y, z, dbscan_final_labels]
+            output_dir_db = self.output_dir/ f"coord_dbfinal_Labels_{fullFilepath.stem}"
+            output_dir_db.mkdir(parents=True, exist_ok=True)
+            kmeans_dbres = output_dir_db/f"dbfinal{fullFilepath.stem}"
+            # np.save(f"{kmeans_dbres}.npy", kdb_coords_with_final_labels)  # save .npy
+            sio.savemat(f"{kmeans_dbres}.mat", {"labels": kdb_coords_with_final_labels})  # save .mat
+            print(f"\n \n \n Saving the dbscan final labels and coordinates in the path: {kmeans_dbres} \n \n \n")
 
 
         # For saving the k-means cluster only and corresponding coordinates and labels results -------- >
         # kmeans_labels = kmeans_labels
-        kmeans_coords_with_labels = np.hstack((coords, kmeans_labels.reshape(-1, 1)))  # [x, y, z, kmeans_label]
-        # Save as .npy and .mat for all kmeans labels with coordinates.
-        fullFilepath = Path(fileFullpath)
-        output_dir_sep = self.output_dir/ f"coord_kmeansLabels_{fullFilepath.stem}"
-        output_dir_sep.mkdir(parents=True, exist_ok=True)
-        kmeans_intResultDir = output_dir_sep/f"kmIntensity{fullFilepath.stem}"
-        np.save(f"{kmeans_intResultDir}.npy", kmeans_coords_with_labels)  # save .npy
-        sio.savemat(f"{kmeans_intResultDir}.mat", {"labels": kmeans_coords_with_labels})  # save .mat
+        if kmeans_labels is not None:
+            kmeans_coords_with_labels = np.hstack((coords, kmeans_labels.reshape(-1, 1)))  # [x, y, z, kmeans_label]
+            # Save as .npy and .mat for all kmeans labels with coordinates.
+            fullFilepath = Path(fileFullpath)
+            if saveallseginonedir == True:
+                kmeans_intResultDir = self.output_dir / f"kmIntensity{fullFilepath.stem}"
+                kmeans_intResultDir.mkdir(parents=True, exist_ok=True)
+            else:
+                output_dir_sep = self.output_dir/ f"coord_kmeansLabels_{fullFilepath.stem}"
+                output_dir_sep.mkdir(parents=True, exist_ok=True)
+                kmeans_intResultDir = output_dir_sep/f"kmIntensity{fullFilepath.stem}"
+            # np.save(f"{kmeans_intResultDir}.npy", kmeans_coords_with_labels)  # save .npy
+            sio.savemat(f"{kmeans_intResultDir}.mat", {"labels": kmeans_coords_with_labels})  # save .mat
+            print(f"\n \n \n Saving the kmeans labels and coordinates in the path: {kmeans_intResultDir} \n \n \n")
 
         # kmeans_intResultDir = os.path.join(self.output_dir,f"kmIntensity{self.fpath.stem}")
         # os.makedirs(kmeans_intResultDir,exist_ok=True)
@@ -218,14 +241,18 @@ class EnhancedClustering:
         # sio.savemat(os.path.join(kmeans_intResultDir, "kmeans_coords_labels.mat"), {"kmeans_coords_labels": kmeans_coords_with_labels})
 
     @logfunction
-    def plot_clusters(self, coords, labels, title,filename_stem):
+    def plot_clusters(self, coords, labels, title= None, savefilenamepng = None):
         fig = plt.figure(figsize=(10, 7))
         ax = fig.add_subplot(111, projection='3d')
         scatter = ax.scatter(
-            coords[:, 0], coords[:, 1], coords[:, 2], c=labels, cmap='tab20', s=2)
+            coords[:, 0], coords[:, 1], coords[:, 2], c=labels, cmap='tab20', s=2, alpha=0.3)
         plt.title(title)
         plt.colorbar(scatter)
-        save_path = self.output_dir / f"{filename_stem}_allclusterSimple.png"
+        if savefilenamepng is not None:
+            save_path = self.output_dir / f"{savefilenamepng}.png"
+        else:
+            save_path = self.output_dir / f"{all}_allclusterSimple.png"
+
         plt.savefig(save_path, dpi=300)
         plt.show()
         plt.close(fig)

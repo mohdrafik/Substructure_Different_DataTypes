@@ -3,6 +3,7 @@ import sys
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
+from scipy.signal import savgol_filter
 
 from pathlib import Path
 
@@ -99,6 +100,7 @@ class GroupingBasedDistance:
         plt.show()
 
     def save_plot(self, plot_save_path=None, Title=None, filename=None, pdfsave=None):
+
         """
         To save the plot produce for each file:
         args:
@@ -137,6 +139,7 @@ class GroupingBasedDistance:
 
         plt.savefig(file_fig_name, dpi=600)
         print(f"file is saved at : {file_fig_name}\n")
+
 
     # @staticmethod
     def test_sliding_window_variance(self,data=None, sliding_window_size =100, fname=None, plot_save_path=None):
@@ -378,6 +381,63 @@ class GroupingBasedDistance:
         # plt.show()      
 
         return segments
+    
+    # this function is not working properly because the data is sorted and it is not possible to have local maxima in the sorted data. it's  taking too long.
+    def find_local_maxima_basedon_variance(self, data, window_size= None):
+        
+        # Example sorted data (could be your dataset)
+
+        # data = np.sort(np.random.normal(0, 1, 50))  # Replace with your sorted data
+        data = np.asarray(data)  # Ensure data is a numpy array
+        # Store results
+        max_variances = []
+        indices = []
+        window_sizes = []
+
+        # Iterate over increasing window sizes
+        for w in range(2, len(data)//2):  # you can decide max window size
+            variances = []
+            for i in range(len(data) - w + 1):
+                window = data[i:i+w]
+                var = np.var(window)
+                variances.append(var)
+            variances = np.array(variances)
+
+            # Find local maxima in the variance array
+            # (compare with neighbors)
+            for j in range(1, len(variances)-1):
+                if variances[j] > variances[j-1] and variances[j] > variances[j+1]:
+                    max_variances.append(variances[j])
+                    indices.append((j, w))  # start index + window size
+                    window_sizes.append(w)
+
+        # Print results
+        for var, (idx, w) in zip(max_variances, indices):
+            print(f"Local max variance: {var:.4f} in window starting at index {idx} (size {w}), values: {data[idx:idx+w]}")
+
+## <-----------  for smoothing the data, specially for finding the inflexion points, we can use Savitzky-Golay filter. ----------->
+    def savgol_smoothening(self, data = None, window_length=None, polyorder=None):
+        """
+        Apply Savitzky-Golay filter to smooth the data.
+        
+        Parameters:
+        - data: 1D numpy array or list of numeric values.
+        - window_length: int, the length of the filter window (must be odd).
+        - polyorder: int, the order of the polynomial used to fit the samples.
+        
+        Returns:
+        - smoothed_data: 1D numpy array of smoothed values.
+        """
+
+        
+
+        window_length = 5 if window_length is None else window_length
+        polyorder = 4 if polyorder is None else polyorder
+
+        smoothed_data = savgol_filter(data, window_length, polyorder)
+        
+        return smoothed_data
+
 
 
 

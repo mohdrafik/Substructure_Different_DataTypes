@@ -5,9 +5,7 @@
 %  which seems to be as main data plot, but it's surface of water
 %  refractive index surrounding the sample (main data).,
 
-
-%% 
-% % usage: % All clusters from each file in subplots (one figure per file)
+%% usage: % All clusters from each file in subplots (one figure per file)
 % clusterlabelCoordPlot_v2('C:\path\to\your\matfiles', 'mesh', 5, 10, 0.6, true)
 % 
 % % One figure per cluster instead
@@ -48,6 +46,8 @@ if ~exist(custom_output_dir, 'dir')
 end
 
 mat_files = dir(fullfile(data_dir, '*.mat'));
+fprintf("Total mat files: --> ")
+disp(length(mat_files));
 
 for i = 1:length(mat_files)
     mat_path = fullfile(data_dir, mat_files(i).name);
@@ -55,9 +55,18 @@ for i = 1:length(mat_files)
 
     try
         alldata = load(mat_path);
+     
         if isstruct(alldata)
+            fprintf("i am in isstruct: and alldata : \n");
+            disp(alldata)
             fieldNames = fieldnames(alldata);
+            fprintf("filename: fieldnames:");
+            disp(fieldNames);
+            fieldname_just_to_check = fieldNames{1};
+            fprintf("fieldname_just_to_check: --> ")
+            disp(fieldname_just_to_check)
             datavalues = alldata.(fieldNames{1});
+            disp(datavalues(1:3,:));
         else
             datavalues = alldata;
         end
@@ -65,6 +74,8 @@ for i = 1:length(mat_files)
         coords = datavalues(:, 1:3);
         labels = datavalues(:, 4);
         unique_labels = unique(labels);
+        fprintf("unique _labels: -->")
+        disp(unique_labels)
 
         if use_subplots
             n = numel(unique_labels);
@@ -106,8 +117,11 @@ for i = 1:length(mat_files)
 %             savefig(fig, [base_filename '_subplots.fig']);
             saveas(fig, char(base_filename +'_subplots.png'));
             close(fig);
+
         else
-            % Plot each cluster separately
+
+            fprintf("Plot each cluster separately --> plot each figure seperatly.");
+
             for j = 1:length(unique_labels)
                 cluster_id = unique_labels(j);
                 if cluster_id == -1, continue; end
@@ -159,7 +173,9 @@ for i = 1:length(mat_files)
                         imwrite(imind, cm, gif_filename, 'gif', 'WriteMode', 'append', 'DelayTime', 0.06);
                     end
                 end
+
                 close(fig);
+
             end
         end
     catch ME
@@ -171,7 +187,6 @@ fprintf('\n  All processing and visualizations complete.\n');
 end
 
 
-%% 
 % function clusterlabelCoordPlot_v2(data_dir, mode, alpha_value, min_cluster_size, face_transparency)
 % % =========================================================================
 % % clusterlabelCoordPlot_v2 - Visualize Labeled 3D Cluster Meshes from Files
@@ -271,24 +286,6 @@ end
 % 
 % fprintf('\n  All cluster visualizations are complete.\n');
 % end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

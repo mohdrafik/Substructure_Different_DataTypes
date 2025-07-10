@@ -2,16 +2,26 @@ close all;
 clc;
 clear;
 
-data_dir_root = input("enter data_dir :");
+data_dir_root = input("enter data_dir :","s"); 
+%Example usage:  % without any quotes 
+% enter data_dir :C:\Users\Gaetano\Desktop\create_with_codeRafi\MyProjects\Substructure_Different_DataTypes\results\kmeans_fgdata\
+
+disp("Path entered: ");
+disp(data_dir_root);
 
 % data_dirParent = fullfile(data_dir_root,"data_dir");
 
 % disp(data_dir_root); data_dir_root = fullfile(data_dir_root);
 
-Prefix = input("input prefix:");
-Prefix = Prefix+'*' ;
+Prefix_intial = input("input prefix:","s");
+% example usage: input prefix:coord_kmeans % without any quotes 
 
-find_dirWithPrefix = dir(fullfile(data_dir_root,Prefix));   % only one arguments taken by the dir, it will return all files and folder in the given directory path those start with Prefix as entered by the user.
+Prefix = Prefix_intial + "*" ;
+disp(['Prefix pattern: ', Prefix])
+disp(Prefix)
+% only one arguments taken by the dir, it will return all files and folder in the given directory path those start with Prefix as entered by the user.
+find_dirWithPrefix = dir(fullfile(data_dir_root,Prefix));   
+
 %  # it returns the structre array with
 size_structArray_WithPrefix= size(find_dirWithPrefix);
 Totalfiles_withPrefix = size_structArray_WithPrefix(1,1);
@@ -35,19 +45,22 @@ for i = 1:Totalfiles_withPrefix
 
         %%% providing the input for the clusterlabelCoordPlot.m function.
                %%% data_dir = fullfile(dir_path,dir_name);
-                fprintf("\n data_dir before feeding to .mat function: %s",data_dir);
+                fprintf("\n data_dir before feeding to .mat function: %s\n",data_dir);
                 mode = 'point';  %  'mesh', 'point', or 'mesh+point'
                 alpha_value = 5;
-                min_cluster_size = 10;
+                min_cluster_size = 3;
                 face_transparency = 0.6;
-                use_subplots = true; % true
+                use_subplots = false; % true
         
         
-                clusterlabelCoordPlot_v2(data_dir, mode, alpha_value, min_cluster_size, face_transparency, use_subplots);
+%                 clusterlabelCoordPlot_v2(data_dir, mode, alpha_value, min_cluster_size, face_transparency, use_subplots);
+
+                clusterlabelCoordPlot_batch3(data_dir,mode, alpha_value, min_cluster_size, face_transparency, use_subplots)
+
 %                 [~, name, ~] = fileparts(dir_name);
 %                 saveas(gcf, fullfile(data_dir, [name '_labelPlot.png']));
 %                 close(gcf);
-        %         
+%         %         
         %     % Print input arguments for debugging
         %     fprintf('\n[DEBUG] data_dir: %s\n', data_dir);
         %     fprintf('[DEBUG] mode: %s\n', mode);

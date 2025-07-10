@@ -34,7 +34,7 @@ def logfunction(func):
 
 class EnhancedClustering:
 
-    def __init__(self, relativeDataPath, output_dir= None, datapath=None, filesuffix=None, intensityBased_Kmeans=True, THRESHOLD_VALUE=False, n_clusters=None, eps_extractedFromData=None, min_samples_loadFromData=None):
+    def __init__(self, relativeDataPath, output_dir= None, datapath=None, filesuffix=None, intensityBased_Kmeans=True, THRESHOLD_VALUE=None, n_clusters=None, eps_extractedFromData=None, min_samples_loadFromData=None):
 
         """ 
         it will use dteh both kmeans and dbscan to cluster the data
@@ -49,7 +49,7 @@ class EnhancedClustering:
             min_samples_loadFromData  (bool, optional): Load min_samples value from JSON. Defaults to False.
         """
         self.datapath = Path(datapath) if datapath is not None else Path.cwd()/relativeDataPath
-        self.output_dir = Path(output_dir) if output_dir is not None else Path.cwd().parent/"results"/"kmenasdbscan_Results"/ "kmeans_result_Intensityonly"
+        self.output_dir = Path(output_dir) if output_dir is not None else Path.cwd().parent/"results"/"kmeans_fgdata"
         self.THRESHOLD_VALUE = THRESHOLD_VALUE
         self.n_clusters = n_clusters if n_clusters is not None else 6
         self.relativeDataPath = relativeDataPath
@@ -199,13 +199,14 @@ class EnhancedClustering:
         return dbscan_final_labels
 
     @logfunction
-    def save_results(self, dbscan_final_labels= None, kmeans_labels= None, coords = None, fileFullpath = None,saveallseginonedir=None):
+    def save_results(self, dbscan_final_labels= None, kmeans_labels= None, coords = None, fileFullpath = None,saveAllfilesClustOneDir=None):
 
         # os.makedirs(self.output_dir, exist_ok=True)
         # np.save(os.path.join(self.output_dir, "cluster_labels.npy"), dbscan_final_labels)
         # sio.savemat(os.path.join(self.output_dir,
         #             "cluster_labels.mat"), {"labels": dbscan_final_labels})
         # np.save(os.path.join(self.output_dir, "voxel_coords.npy"), coords)
+
         if dbscan_final_labels is not None:
             fullFilepath = Path(fileFullpath)
             kdb_coords_with_final_labels = np.hstack((coords, dbscan_final_labels.reshape(-1, 1)))  # [x, y, z, dbscan_final_labels]
@@ -223,15 +224,16 @@ class EnhancedClustering:
             kmeans_coords_with_labels = np.hstack((coords, kmeans_labels.reshape(-1, 1)))  # [x, y, z, kmeans_label]
             # Save as .npy and .mat for all kmeans labels with coordinates.
             fullFilepath = Path(fileFullpath)
-            if saveallseginonedir == True:
+            if saveAllfilesClustOneDir:
                 kmeans_intResultDir = self.output_dir / f"kmIntensity{fullFilepath.stem}"
                 kmeans_intResultDir.mkdir(parents=True, exist_ok=True)
             else:
                 output_dir_sep = self.output_dir/ f"coord_kmeansLabels_{fullFilepath.stem}"
                 output_dir_sep.mkdir(parents=True, exist_ok=True)
                 kmeans_intResultDir = output_dir_sep/f"kmIntensity{fullFilepath.stem}"
+                
             # np.save(f"{kmeans_intResultDir}.npy", kmeans_coords_with_labels)  # save .npy
-            sio.savemat(f"{kmeans_intResultDir}.mat", {"labels": kmeans_coords_with_labels})  # save .mat
+            sio.savemat(f"{kmeans_intResultDir}.mat", {"kmeans_coords_labels": kmeans_coords_with_labels})  # save .mat
             print(f"\n \n \n Saving the kmeans labels and coordinates in the path: {kmeans_intResultDir} \n \n \n")
 
         # kmeans_intResultDir = os.path.join(self.output_dir,f"kmIntensity{self.fpath.stem}")

@@ -46,7 +46,7 @@ for i = 1:Totalfiles_withPrefix
         %%% providing the input for the clusterlabelCoordPlot.m function.
                %%% data_dir = fullfile(dir_path,dir_name);
                 fprintf("\n data_dir before feeding to .mat function: %s\n",data_dir);
-                mode = 'point';  %  'mesh', 'point', or 'mesh+point'
+                mode = 'point';  %  'mesh', 'point', or 'mesh+point'4
                 alpha_value = 5;
                 min_cluster_size = 3;
                 face_transparency = 0.6;

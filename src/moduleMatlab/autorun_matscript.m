@@ -53,7 +53,7 @@ for i = 1:Totalfiles_withPrefix
                 use_subplots = false; % true
         
         
-%                 clusterlabelCoordPlot_v2(data_dir, mode, alpha_value, min_cluster_size, face_transparency, use_subplots);
+%                 (data_dir, mode, alpha_value, min_cluster_size, face_transparency, use_subplots);
 
                 clusterlabelCoordPlot_batch3(data_dir,mode, alpha_value, min_cluster_size, face_transparency, use_subplots)
 

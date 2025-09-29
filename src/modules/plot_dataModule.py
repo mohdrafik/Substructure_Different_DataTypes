@@ -13,7 +13,7 @@ import imageio.v2 as imageio
 from skimage.filters import threshold_otsu
 from skimage.measure import marching_cubes
 from scipy.ndimage import gaussian_filter
-
+import math
 import open3d as o3d
 import imageio
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -824,7 +824,85 @@ class DataPlotter:
         
         plt.show()
 
-     
+    @staticmethod
+    @decoratorLog
+    def plot_multiple_subplots(
+        data_list,
+        filenames,
+        n_plots=None,
+        x_values=None,
+        xlabel="X-axis",
+        ylabel="Y-axis",
+        figsize_per_plot=(4, 3),
+        title_fontsize=8,
+        tick_fontsize=6,
+        show_grid=True,
+        add_legend=False,
+        legend_labels=None,
+        save_path=None
+    ):
+        if n_plots is None:
+            n_plots = len(data_list)
+
+        cols = math.ceil(math.sqrt(n_plots))
+        rows = math.ceil(n_plots / cols)
+
+        figsize = (figsize_per_plot[0] * cols, figsize_per_plot[1] * rows)
+        fig, axes = plt.subplots(rows, cols, figsize=figsize)
+        axes = axes.flatten() if n_plots > 1 else [axes]
+
+        for i in range(n_plots):
+            y = data_list[i]
+            if x_values is None:
+                x = np.arange(len(y))
+            elif isinstance(x_values, list):
+                x = x_values[i]
+            else:
+                x = x_values
+
+            axes[i].plot(x, y, label=legend_labels[i] if legend_labels else None)
+            axes[i].set_title(filenames[i], fontsize=title_fontsize)
+            axes[i].set_xlabel(xlabel, fontsize=tick_fontsize)
+            axes[i].set_ylabel(ylabel, fontsize=tick_fontsize)
+            axes[i].tick_params(labelsize=tick_fontsize)
+            if show_grid:
+                axes[i].grid(True)
+            if add_legend and legend_labels:
+                axes[i].legend(fontsize=tick_fontsize)
+
+        for j in range(n_plots, len(axes)):
+            axes[j].axis("off")
+
+        plt.tight_layout()
+
+        if save_path:
+            plt.savefig(save_path, dpi=300)
+
+        return fig
+
+    # --------------------------------------------  Example use case -----------------------------------------------------------------------------
+    # example_data = [np.sin(np.linspace(0, 2*np.pi, 100) + i) for i in range(4)]
+    # titles = [f"Signal {i}" for i in range(4)]
+    # x_shared = np.linspace(0, 2*np.pi, 100)
+    # legend_list = ["Sine wave"] * 4
+
+    # fig = plot_multiple_subplots(
+    #     example_data,
+    #     titles,
+    #     x_values=x_shared,
+    #     xlabel="Time",
+    #     ylabel="Amplitude",
+    #     figsize_per_plot=(5, 3),
+    #     title_fontsize=10,
+    #     tick_fontsize=8,
+    #     show_grid=True,
+    #     add_legend=True,
+    #     legend_labels=legend_list,
+    #     save_path="/mnt/data/sample_subplots_output.png"
+    # )
+
+    # plt.show()
+
 
 if __name__ == "__main__":
 

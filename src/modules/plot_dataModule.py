@@ -839,8 +839,35 @@ class DataPlotter:
         show_grid=True,
         add_legend=False,
         legend_labels=None,
-        save_path=None
+        save_path=None,
+        common_title=None  # <-- Added argument for common title
     ):
+        """
+        Plots multiple datasets as subplots in a single figure.
+        This function creates a grid of subplots, each displaying one dataset from `data_list`.
+        Each subplot is titled using the corresponding entry in `filenames`. The function supports
+        customization of axis labels, grid display, legends, subplot sizing, and an optional common
+        title for the entire figure. The figure can also be saved to disk.
+        Parameters:
+            data_list (list): List of datasets to plot, each as a sequence of y-values.
+            filenames (list): List of titles for each subplot, typically filenames or identifiers.
+            n_plots (int, optional): Number of subplots to create. Defaults to length of `data_list`.
+            x_values (list or array, optional): X-values for each dataset. If a list, each entry is used
+                for the corresponding subplot; if None, uses range(len(y)) for each dataset.
+            xlabel (str, optional): Label for the x-axis of each subplot. Default is "X-axis".
+            ylabel (str, optional): Label for the y-axis of each subplot. Default is "Y-axis".
+            figsize_per_plot (tuple, optional): Size of each subplot in inches (width, height).
+                Default is (4, 3).
+            title_fontsize (int, optional): Font size for subplot titles. Default is 8.
+            tick_fontsize (int, optional): Font size for axis ticks and labels. Default is 6.
+            show_grid (bool, optional): Whether to display grid lines in subplots. Default is True.
+            add_legend (bool, optional): Whether to add a legend to each subplot. Default is False.
+            legend_labels (list, optional): List of legend labels for each subplot. Used if `add_legend` is True.
+            save_path (str, optional): File path to save the figure. If None, the figure is not saved.
+            common_title (str, optional): Title for the entire figure (suptitle). Default is None.
+        Returns:
+            matplotlib.figure.Figure: The created matplotlib figure object containing the subplots.
+        """
         if n_plots is None:
             n_plots = len(data_list)
 
@@ -873,7 +900,10 @@ class DataPlotter:
         for j in range(n_plots, len(axes)):
             axes[j].axis("off")
 
-        plt.tight_layout()
+        if common_title:
+            fig.suptitle(common_title, fontsize=title_fontsize + 2, fontweight='bold')
+
+        plt.tight_layout(rect=[0, 0, 1, 0.97])  # leave space for suptitle
 
         if save_path:
             plt.savefig(save_path, dpi=300)
